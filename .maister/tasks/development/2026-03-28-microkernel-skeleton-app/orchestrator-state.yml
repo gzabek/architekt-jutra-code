@@ -1,0 +1,91 @@
+orchestrator:
+  started_phase: phase-1
+  completed_phases: [phase-1, phase-2, phase-5, phase-6, phase-7, phase-8, phase-10, phase-11, phase-12, phase-14]
+  failed_phases: []
+  auto_fix_attempts: {}
+  options:
+    spec_audit_enabled: true
+    skip_test_suite: true
+    e2e_enabled: true
+    user_docs_enabled: false
+    code_review_enabled: true
+    pragmatic_review_enabled: true
+    reality_check_enabled: true
+    production_check_enabled: true
+  created: "2026-03-28T00:00:00Z"
+  updated: "2026-03-28T00:00:00Z"
+  task_path: .maister/tasks/development/2026-03-28-microkernel-skeleton-app
+  task_ids:
+    phase-1: "7"
+    phase-2: "8"
+    phase-5: "9"
+    phase-6: "10"
+    phase-7: "11"
+    phase-8: "12"
+    phase-10: "13"
+    phase-11: "14"
+    phase-14: "15"
+
+task:
+  title: "Build microkernel skeleton app with Spring Boot, React, and PostgreSQL"
+  description: "Build a sample application showcasing microkernel architecture with Spring Boot backend, React frontend, and containerized PostgreSQL. No authorization. Frontend features will be implemented in next step — here just a proper skeleton with all technology running."
+  status: completed
+  tags: [development, architecture, skeleton]
+  priority: medium
+
+task_context:
+  risk_level: "low"
+  clarifications_resolved: true
+  scope_expanded: false
+  architecture_decision: "Spring DI-based microkernel (ADR-003)"
+  task_characteristics:
+    has_reproducible_defect: false
+    modifies_existing_code: true
+    creates_new_entities: true
+    involves_data_operations: false
+    ui_heavy: true
+  research_reference:
+    path: .maister/tasks/research/2026-03-28-microkernel-skeleton-app
+    research_question: "How to build a microkernel architecture skeleton app with Spring Boot backend, React frontend, and containerized PostgreSQL — all technology integrated and running, no auth, no business features?"
+    research_type: "mixed"
+    confidence_level: "high"
+  phase_summaries:
+    research:
+      summary: "Research complete with high confidence (90-95%). Skeleton requires 9 new files + 3 modifications. Single Maven module monorepo with embedded React frontend (Vite+TS), Spring DI-based microkernel (zero deps), Docker Compose PostgreSQL for dev, TestContainers for tests. 5 ADRs documented. 5-step implementation order: database foundation, microkernel interfaces, backend API, React frontend, Maven build integration."
+      key_findings:
+        - "Single Maven module with src/main/frontend/ for React (ADR-001)"
+        - "Vite + React 19 + TypeScript, CRA deprecated (ADR-002)"
+        - "Spring DI plugin pattern with zero additional dependencies (ADR-003)"
+        - "Docker Compose for dev + TestContainers for tests via ServiceConnection (ADR-004)"
+        - "frontend-maven-plugin for reproducible Maven builds (ADR-005)"
+        - "No explicit datasource properties needed — auto-configured"
+        - "SPA forwarding controller for React Router support"
+      recommended_approach: "5-step additive implementation: compose.yml + spring-boot-docker-compose → microkernel interfaces → HealthController + SpaForwardController → Vite React scaffold → frontend-maven-plugin integration"
+      decisions_made:
+        - "ADR-001: Single module with embedded frontend"
+        - "ADR-002: Vite + React 19 + TypeScript"
+        - "ADR-003: Spring DI-based microkernel"
+        - "ADR-004: Docker Compose (dev) + TestContainers (tests)"
+        - "ADR-005: frontend-maven-plugin"
+    codebase_analysis:
+      key_files: [pom.xml, AjApplication.java, application.properties, .gitignore, TestcontainersConfiguration.java]
+      primary_language: "Java 25"
+      summary: "Pre-alpha Spring Boot 4.0.5 scaffold with 4 source files. Purely additive task — 9 new files + 3 modifications."
+    clarifications:
+      - "Landing page: React calls /api/health and displays result"
+    gap_analysis:
+      integration_points:
+        - "compose.yml -> spring-boot-docker-compose auto-discovery"
+        - "PluginRegistry -> Spring DI List<Plugin> injection"
+        - "HealthController -> /api/health REST endpoint"
+        - "SpaForwardController -> forward:/index.html"
+        - "Vite build -> src/main/resources/static/"
+        - "Vite dev proxy -> /api/* to localhost:8080"
+        - "db.changelog-master.yaml -> Liquibase auto-config"
+        - "frontend-maven-plugin -> generate-resources phase"
+      summary: "9 new files + 3 modifications. Risk: low. No critical decisions — all resolved by research ADRs. Two minor decisions: pin TestContainers to postgres:17, use YAML for Liquibase."
+    scope_clarifications: {scope_expanded: null, summary: null}
+    ui_mockups: {components_designed: [], summary: null}
+    specification:
+      summary: "12 core requirements (5 backend, 4 frontend, 3 modifications), 7 success criteria, 8 reusable components, 9 new components. Follows research code samples closely. PostgreSQL 18, YAML Liquibase."
+    architecture_decision: {decision: null, summary: null}

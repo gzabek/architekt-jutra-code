@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Category Form Page — Product Design</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.5rem;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+    header h1 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    #status { font-size: 0.8rem; color: #4a4; font-weight: 500; }
+    #status.disconnected { color: #a44; }
+
+    /* Screen navigation */
+    .screen-nav {
+      background: #fafafa;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 0.5rem 1.5rem;
+    }
+    .nav-screens {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.25rem;
+    }
+    .nav-screen {
+      padding: 0.3rem 0.7rem;
+      border-radius: 4px;
+      text-decoration: none;
+      color: #555;
+      font-size: 0.8rem;
+      background: #eee;
+      transition: background 0.15s;
+    }
+    .nav-screen:hover { background: #ddd; }
+    .nav-screen.active { background: #333; color: #fff; }
+    .nav-prevnext {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.25rem;
+    }
+    .nav-arrow {
+      font-size: 0.8rem;
+      color: #0066cc;
+      text-decoration: none;
+    }
+    .nav-arrow:hover { text-decoration: underline; }
+
+    /* Gallery */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      padding: 1rem 0;
+    }
+    .gallery-card {
+      display: block;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+    .gallery-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .gallery-card-title {
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+    }
+    .gallery-card-preview {
+      padding: 1rem;
+      max-height: 200px;
+      overflow: hidden;
+      position: relative;
+      font-size: 0.7rem;
+      transform: scale(0.8);
+      transform-origin: top left;
+      pointer-events: none;
+    }
+    .gallery-card-preview::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: linear-gradient(transparent, white);
+    }
+
+    /* Mockup content */
+    main {
+      max-width: 1200px;
+      margin: 1.5rem auto;
+      padding: 1.5rem;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      min-height: 300px;
+      position: relative;
+    }
+    .placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      color: #999;
+      font-size: 1rem;
+      text-align: center;
+      line-height: 1.8;
+    }
+    .annotation-tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 3px;
+      pointer-events: none;
+      max-width: 250px;
+      z-index: 1000;
+      line-height: 1.3;
+    }
+    .annotation-tooltip::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: 10px;
+      width: 8px;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.75);
+      transform: rotate(45deg);
+    }
+
+    /* Interactive screen-to-screen navigation */
+    [data-screen] { cursor: pointer; }
+    [data-screen]:hover { outline: 2px solid #0066cc; outline-offset: 2px; border-radius: 2px; }
+
+    /* Annotation toggle */
+    .annotations-hidden .annotation-tooltip { display: none; }
+    #annotation-toggle {
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      background: #f0f0f0;
+      cursor: pointer;
+      margin-left: 0.75rem;
+    }
+    #annotation-toggle:hover { background: #e0e0e0; }
+    #annotation-toggle.active { background: #333; color: #fff; border-color: #333; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Category Form Page</h1>
+    <div>
+      <button id="annotation-toggle" class="active" title="Toggle annotation tooltips">Annotations</button>
+      <span id="status">Connected</span>
+    </div>
+  </header>
+
+  <nav class="screen-nav"><div class="nav-screens"><a href="/screen/product-list-page" class="nav-screen">Product List Page</a><a href="/screen/product-form-page" class="nav-screen">Product Form Page</a><a href="/screen/category-list-page" class="nav-screen">Category List Page</a><a href="/screen/category-form-page" class="nav-screen active">Category Form Page</a></div><div class="nav-prevnext"><a href="/screen/category-list-page" class="nav-arrow">&larr; Category List Page</a><span></span></div></nav>
+
+  <main id="mockup-container">
+    <style>* { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #FAFAF9; color: #0F172A; } .app-shell { display: flex; min-height: 100vh; } .sidebar { width: 220px; background: #134E4A; color: white; padding: 24px 0; flex-shrink: 0; } .logo { font-size: 28px; font-weight: 800; padding: 0 24px 32px; color: #F59E0B; letter-spacing: -1px; } nav { display: flex; flex-direction: column; gap: 2px; } .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 24px; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; } .nav-item:hover { color: white; background: rgba(255,255,255,0.08); } .nav-item.active { color: white; background: rgba(255,255,255,0.12); border-right: 3px solid #F59E0B; } .content { flex: 1; padding: 32px 40px; max-width: 600px; } .page-header { margin-bottom: 24px; } .page-header h1 { font-size: 24px; font-weight: 700; color: #0F172A; margin-top: 4px; } .breadcrumb { font-size: 13px; color: #64748B; } .breadcrumb a { color: #0D9488; text-decoration: none; cursor: pointer; } .breadcrumb a:hover { text-decoration: underline; } .breadcrumb span { margin: 0 4px; } .form-card { background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 32px; } .form-stack { display: flex; flex-direction: column; gap: 20px; } .form-group { display: flex; flex-direction: column; gap: 6px; } .form-group label { font-size: 14px; font-weight: 600; color: #334155; } .required { color: #EF4444; } .form-input { padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 14px; transition: border-color 0.15s, box-shadow 0.15s; width: 100%; } .form-input:focus { outline: none; border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1); } .form-textarea { resize: vertical; min-height: 80px; } .form-hint { font-size: 12px; color: #94A3B8; } .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #F1F5F9; } .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all 0.15s; text-decoration: none; } .btn-primary { background: #0D9488; color: white; } .btn-primary:hover { background: #0F766E; } .btn-secondary { background: white; color: #334155; border: 1px solid #E2E8F0; } .btn-secondary:hover { background: #F8FAFC; }</style>
+<div id="mockup-content"><div class="app-shell"><aside class="sidebar"><div class="logo">aj</div><nav><a class="nav-item" data-screen="product-list-page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>Products</a><a class="nav-item active" data-screen="category-list-page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>Categories</a></nav></aside><main class="content"><header class="page-header"><div><nav class="breadcrumb"><a data-screen="category-list-page">Categories</a> <span>/</span> <span>Add New Category</span></nav><h1>Add New Category</h1></div></header><form class="form-card"><div class="form-stack"><div class="form-group"><label>Category Name <span class="required">*</span></label><input type="text" placeholder="e.g. Electronics" class="form-input" /><span class="form-hint">Must be unique across all categories</span></div><div class="form-group"><label>Description</label><textarea class="form-input form-textarea" placeholder="Describe what products belong in this category..." rows="3"></textarea></div></div><div class="form-actions"><button type="button" class="btn btn-secondary" data-screen="category-list-page">Cancel</button><button type="submit" class="btn btn-primary">Save Category</button></div></form></main></div></div>
+  </main>
+
+  <script>
+    // SSE client for live refresh — navigates to /latest on new screen
+    const statusEl = document.getElementById('status');
+    const evtSource = new EventSource('/events');
+    evtSource.onmessage = function(e) {
+      if (e.data === 'refresh') window.location.href = '/latest';
+    };
+    evtSource.onopen = function() {
+      statusEl.textContent = 'Connected';
+      statusEl.className = '';
+    };
+    evtSource.onerror = function() {
+      statusEl.textContent = 'Reconnecting...';
+      statusEl.className = 'disconnected';
+    };
+
+    // Annotation overlay rendering
+    const annotations = [{"selector":".form-card","note":"Same form card pattern as Product Form — Chakra UI Card component"},{"selector":"input[placeholder=\"e.g. Electronics\"]","note":"Validated with @NotBlank and @Size(max=100). Server returns 409 if name already exists."}];
+    function renderAnnotations() {
+      const container = document.getElementById('mockup-container');
+      annotations.forEach(function(ann) {
+        if (!ann.selector) return;
+        const target = container.querySelector(ann.selector);
+        if (!target) return;
+        const text = ann.note || ann.text || '';
+        if (!text) return;
+        const rect = target.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const tooltip = document.createElement('div');
+        tooltip.className = 'annotation-tooltip';
+        tooltip.textContent = text;
+        tooltip.style.top = (rect.bottom - containerRect.top + 6) + 'px';
+        tooltip.style.left = (rect.left - containerRect.left) + 'px';
+        container.appendChild(tooltip);
+      });
+    }
+    if (annotations.length > 0) requestAnimationFrame(renderAnnotations);
+
+    // Annotation toggle with localStorage persistence
+    var toggleBtn = document.getElementById('annotation-toggle');
+    var container = document.getElementById('mockup-container');
+    var annotationsVisible = localStorage.getItem('annotations-visible') !== 'false'; // default: true
+    function updateToggle() {
+      if (annotationsVisible) {
+        container.classList.remove('annotations-hidden');
+        toggleBtn.classList.add('active');
+      } else {
+        container.classList.add('annotations-hidden');
+        toggleBtn.classList.remove('active');
+      }
+    }
+    updateToggle();
+    toggleBtn.addEventListener('click', function() {
+      annotationsVisible = !annotationsVisible;
+      localStorage.setItem('annotations-visible', annotationsVisible);
+      updateToggle();
+    });
+
+    // Screen-to-screen navigation: clicking elements with data-screen="slug" navigates to that screen
+    document.getElementById('mockup-container').addEventListener('click', function(e) {
+      var target = e.target.closest('[data-screen]');
+      if (target) {
+        e.preventDefault();
+        window.location.href = '/screen/' + target.getAttribute('data-screen');
+      }
+    });
+  </script>
+</body>
+</html>

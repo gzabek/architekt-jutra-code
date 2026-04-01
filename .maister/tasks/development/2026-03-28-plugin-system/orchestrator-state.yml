@@ -1,0 +1,103 @@
+orchestrator:
+  started_phase: null
+  completed_phases: [phase-1, phase-2, phase-5, phase-6, phase-7, phase-8, phase-10, phase-11, phase-12, phase-14]
+  failed_phases: []
+  auto_fix_attempts:
+    phase-1: 0
+    phase-2: 0
+    phase-5: 0
+    phase-6: 0
+    phase-7: 0
+    phase-8: 0
+    phase-10: 0
+    phase-11: 0
+    phase-14: 0
+  options:
+    spec_audit_enabled: true
+    skip_test_suite: true
+    e2e_enabled: true
+    user_docs_enabled: false
+    code_review_enabled: true
+    pragmatic_review_enabled: true
+    reality_check_enabled: true
+    production_check_enabled: true
+  created: 2026-03-28T00:00:00Z
+  updated: 2026-03-28T00:00:00Z
+  task_path: .maister/tasks/development/2026-03-28-plugin-system
+  task_ids:
+    phase-1: "1"
+    phase-2: "2"
+    phase-5: "3"
+    phase-6: "4"
+    phase-7: "5"
+    phase-8: "6"
+    phase-10: "7"
+    phase-11: "8"
+    phase-14: "9"
+
+task:
+  title: Implement Plugin System
+  description: >
+    Implement the plugin system as described in plugin-system-design.md.
+    Plugins are iframe-isolated web apps communicating with the host via postMessage RPC.
+    Backend provides REST APIs for plugin registry, product plugin data, and custom objects.
+    Frontend provides iframe hosting, message handling, and extension point rendering.
+  status: completed
+  tags: [plugin-system, backend, frontend, new-feature]
+  priority: high
+
+task_context:
+  risk_level: medium
+  clarifications_resolved: null
+  scope_expanded: null
+  architecture_decision: null
+  task_characteristics:
+    has_reproducible_defect: false
+    modifies_existing_code: true
+    creates_new_entities: true
+    involves_data_operations: true
+    ui_heavy: true
+  research_reference:
+    path: null
+    research_question: null
+    research_type: null
+    confidence_level: null
+  phase_summaries:
+    research: {summary: null, key_findings: [], recommended_approach: null}
+    codebase_analysis:
+      key_files:
+        - src/main/java/pl/devstyle/aj/core/plugin/PluginRegistry.java
+        - src/main/java/pl/devstyle/aj/core/plugin/Plugin.java
+        - src/main/java/pl/devstyle/aj/core/plugin/PluginDescriptor.java
+        - src/main/java/pl/devstyle/aj/product/Product.java
+        - src/main/java/pl/devstyle/aj/product/ProductController.java
+        - src/main/java/pl/devstyle/aj/core/BaseEntity.java
+        - src/main/frontend/src/components/layout/Sidebar.tsx
+        - src/main/frontend/src/router.tsx
+        - src/main/frontend/src/api/client.ts
+      primary_language: java
+      summary: "Pre-alpha Spring Boot 4 + React 19 app with clean CRUD patterns (Product, Category) and an empty plugin foundation (Plugin/PluginDescriptor interfaces, PluginRegistry). No JSONB, CORS, or security config. ~20 new files, ~10 modified, 3 migrations needed."
+    clarifications: []
+    gap_analysis:
+      integration_points:
+        - "3 new REST controller prefixes"
+        - "New /plugins/:pluginId route"
+        - "Sidebar dynamic menu items"
+        - "New ProductDetailPage with tabs"
+        - "ProductListPage plugin filters"
+        - "Static asset /assets/plugin-sdk.js"
+      summary: "Zero plugin infrastructure exists. ~25-30 new files, ~10 modified. Old Plugin/PluginDescriptor/PluginRegistry incompatible — must be replaced. ProductDetailPage missing for tabs extension point."
+    scope_clarifications:
+      scope_expanded: true
+      summary: "New ProductDetailPage required. String PK for PluginDescriptor. Server-side JSONB filtering. Multi-entry Vite config for SDK. Delete old plugin interfaces."
+    ui_mockups: {components_designed: [], summary: null}
+    specification:
+      summary: "28 requirements across backend (9), frontend (8), SDK (6), demo plugin (5). 11 reusable components, 8 new. 6 estimated test groups."
+    architecture_decision: {decision: null, summary: null}
+
+verification_context:
+  last_status: null
+  issues_found: []
+  fixes_applied: []
+  decisions_made: []
+  reverify_count: 0

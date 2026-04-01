@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product List Page — Product Design</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.5rem;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+    header h1 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    #status { font-size: 0.8rem; color: #4a4; font-weight: 500; }
+    #status.disconnected { color: #a44; }
+
+    /* Screen navigation */
+    .screen-nav {
+      background: #fafafa;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 0.5rem 1.5rem;
+    }
+    .nav-screens {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.25rem;
+    }
+    .nav-screen {
+      padding: 0.3rem 0.7rem;
+      border-radius: 4px;
+      text-decoration: none;
+      color: #555;
+      font-size: 0.8rem;
+      background: #eee;
+      transition: background 0.15s;
+    }
+    .nav-screen:hover { background: #ddd; }
+    .nav-screen.active { background: #333; color: #fff; }
+    .nav-prevnext {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.25rem;
+    }
+    .nav-arrow {
+      font-size: 0.8rem;
+      color: #0066cc;
+      text-decoration: none;
+    }
+    .nav-arrow:hover { text-decoration: underline; }
+
+    /* Gallery */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      padding: 1rem 0;
+    }
+    .gallery-card {
+      display: block;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+    .gallery-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .gallery-card-title {
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+    }
+    .gallery-card-preview {
+      padding: 1rem;
+      max-height: 200px;
+      overflow: hidden;
+      position: relative;
+      font-size: 0.7rem;
+      transform: scale(0.8);
+      transform-origin: top left;
+      pointer-events: none;
+    }
+    .gallery-card-preview::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: linear-gradient(transparent, white);
+    }
+
+    /* Mockup content */
+    main {
+      max-width: 1200px;
+      margin: 1.5rem auto;
+      padding: 1.5rem;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      min-height: 300px;
+      position: relative;
+    }
+    .placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      color: #999;
+      font-size: 1rem;
+      text-align: center;
+      line-height: 1.8;
+    }
+    .annotation-tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 3px;
+      pointer-events: none;
+      max-width: 250px;
+      z-index: 1000;
+      line-height: 1.3;
+    }
+    .annotation-tooltip::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: 10px;
+      width: 8px;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.75);
+      transform: rotate(45deg);
+    }
+
+    /* Interactive screen-to-screen navigation */
+    [data-screen] { cursor: pointer; }
+    [data-screen]:hover { outline: 2px solid #0066cc; outline-offset: 2px; border-radius: 2px; }
+
+    /* Annotation toggle */
+    .annotations-hidden .annotation-tooltip { display: none; }
+    #annotation-toggle {
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      background: #f0f0f0;
+      cursor: pointer;
+      margin-left: 0.75rem;
+    }
+    #annotation-toggle:hover { background: #e0e0e0; }
+    #annotation-toggle.active { background: #333; color: #fff; border-color: #333; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Product List Page</h1>
+    <div>
+      <button id="annotation-toggle" class="active" title="Toggle annotation tooltips">Annotations</button>
+      <span id="status">Connected</span>
+    </div>
+  </header>
+
+  
+
+  <main id="mockup-container">
+    <style>* { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #FAFAF9; color: #0F172A; } .app-shell { display: flex; min-height: 100vh; } .sidebar { width: 220px; background: #134E4A; color: white; padding: 24px 0; flex-shrink: 0; } .logo { font-size: 28px; font-weight: 800; padding: 0 24px 32px; color: #F59E0B; letter-spacing: -1px; } nav { display: flex; flex-direction: column; gap: 2px; } .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 24px; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; } .nav-item:hover { color: white; background: rgba(255,255,255,0.08); } .nav-item.active { color: white; background: rgba(255,255,255,0.12); border-right: 3px solid #F59E0B; } .content { flex: 1; padding: 32px 40px; overflow-x: auto; } .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; } .page-header h1 { font-size: 24px; font-weight: 700; color: #0F172A; } .subtitle { font-size: 14px; color: #64748B; margin-top: 4px; } .btn { padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; } .btn-primary { background: #0D9488; color: white; } .btn-primary:hover { background: #0F766E; } .filters { display: flex; gap: 12px; margin-bottom: 20px; } .search-box { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 12px; flex: 1; max-width: 320px; } .search-box input { border: none; outline: none; font-size: 14px; width: 100%; background: transparent; } .filter-select { padding: 8px 12px; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 14px; background: white; color: #334155; cursor: pointer; min-width: 160px; } .data-table { width: 100%; border-collapse: separate; border-spacing: 0; background: white; border-radius: 12px; border: 1px solid #E2E8F0; overflow: hidden; } .data-table thead { background: #F0FDFA; } .data-table th { padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #0D9488; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #E2E8F0; white-space: nowrap; } .th-sortable { cursor: pointer; } .th-sortable:hover { color: #0F766E; } .sort-icon { color: #94A3B8; font-size: 11px; } .th-photo { width: 60px; } .th-actions { width: 100px; text-align: center; } .data-table td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; } .data-table tbody tr:hover { background: #F8FAFC; } .data-table tbody tr:last-child td { border-bottom: none; } .photo-thumb { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: #F1F5F9; display: flex; align-items: center; justify-content: center; } .photo-thumb img { width: 100%; height: 100%; object-fit: cover; } .no-photo { background: #F1F5F9; } .td-name { font-weight: 600; color: #1E293B; } .td-sku { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13px; color: #64748B; } .td-price { font-weight: 600; color: #0F766E; } .td-date { color: #64748B; font-size: 13px; } .td-actions { text-align: center; } .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; } .badge-blue { background: #DBEAFE; color: #1E40AF; } .badge-purple { background: #EDE9FE; color: #5B21B6; } .badge-green { background: #D1FAE5; color: #065F46; } .badge-amber { background: #FEF3C7; color: #92400E; } .btn-icon { background: none; border: none; cursor: pointer; padding: 4px; font-size: 16px; border-radius: 6px; transition: background 0.15s; } .btn-icon:hover { background: #F1F5F9; } .btn-danger:hover { background: #FEE2E2; } .table-footer { padding: 12px 16px; font-size: 13px; color: #64748B; }</style>
+<div id="mockup-content"><div class="app-shell"><aside class="sidebar"><div class="logo">aj</div><nav><a class="nav-item active" data-screen="product-list-page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>Products</a><a class="nav-item" data-screen="category-list-page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>Categories</a></nav></aside><main class="content"><header class="page-header"><div><h1>Products</h1><p class="subtitle">Manage your product catalog</p></div><a class="btn btn-primary" data-screen="product-form-page">+ Add Product</a></header><div class="filters"><div class="search-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="Search products..." /></div><select class="filter-select"><option>All Categories</option><option>Electronics</option><option>Clothing</option><option>Home &amp; Garden</option><option>Sports</option></select></div><table class="data-table"><thead><tr><th class="th-photo">Photo</th><th class="th-sortable">Name <span class="sort-icon">↕</span></th><th>SKU</th><th class="th-sortable">Price <span class="sort-icon">↕</span></th><th>Category</th><th class="th-sortable">Created <span class="sort-icon">↓</span></th><th class="th-actions">Actions</th></tr></thead><tbody><tr><td><div class="photo-thumb"><img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=80&h=80&fit=crop" alt="Wireless Headphones"/></div></td><td class="td-name">Wireless Headphones Pro</td><td class="td-sku">WHP-001</td><td class="td-price">$149.99</td><td><span class="badge badge-blue">Electronics</span></td><td class="td-date">Mar 28, 2026</td><td class="td-actions"><button class="btn-icon" title="Edit" data-screen="product-form-page">✏️</button><button class="btn-icon btn-danger" title="Delete">🗑️</button></td></tr><tr><td><div class="photo-thumb"><img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=80&h=80&fit=crop" alt="Classic Watch"/></div></td><td class="td-name">Classic Analog Watch</td><td class="td-sku">CAW-042</td><td class="td-price">$89.50</td><td><span class="badge badge-purple">Clothing</span></td><td class="td-date">Mar 27, 2026</td><td class="td-actions"><button class="btn-icon" title="Edit">✏️</button><button class="btn-icon btn-danger" title="Delete">🗑️</button></td></tr><tr><td><div class="photo-thumb"><img src="https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=80&h=80&fit=crop" alt="Plant Pot"/></div></td><td class="td-name">Ceramic Plant Pot - Large</td><td class="td-sku">CPP-108</td><td class="td-price">$34.00</td><td><span class="badge badge-green">Home &amp; Garden</span></td><td class="td-date">Mar 26, 2026</td><td class="td-actions"><button class="btn-icon" title="Edit">✏️</button><button class="btn-icon btn-danger" title="Delete">🗑️</button></td></tr><tr><td><div class="photo-thumb no-photo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div></td><td class="td-name">Running Shoes Elite</td><td class="td-sku">RSE-220</td><td class="td-price">$199.00</td><td><span class="badge badge-amber">Sports</span></td><td class="td-date">Mar 25, 2026</td><td class="td-actions"><button class="btn-icon" title="Edit">✏️</button><button class="btn-icon btn-danger" title="Delete">🗑️</button></td></tr><tr><td><div class="photo-thumb"><img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=80&h=80&fit=crop" alt="Camera"/></div></td><td class="td-name">Instant Film Camera</td><td class="td-sku">IFC-015</td><td class="td-price">$74.99</td><td><span class="badge badge-blue">Electronics</span></td><td class="td-date">Mar 24, 2026</td><td class="td-actions"><button class="btn-icon" title="Edit">✏️</button><button class="btn-icon btn-danger" title="Delete">🗑️</button></td></tr></tbody></table><div class="table-footer">Showing 5 products</div></main></div></div>
+  </main>
+
+  <script>
+    // SSE client for live refresh — navigates to /latest on new screen
+    const statusEl = document.getElementById('status');
+    const evtSource = new EventSource('/events');
+    evtSource.onmessage = function(e) {
+      if (e.data === 'refresh') window.location.href = '/latest';
+    };
+    evtSource.onopen = function() {
+      statusEl.textContent = 'Connected';
+      statusEl.className = '';
+    };
+    evtSource.onerror = function() {
+      statusEl.textContent = 'Reconnecting...';
+      statusEl.className = 'disconnected';
+    };
+
+    // Annotation overlay rendering
+    const annotations = [{"selector":".sidebar","note":"AppShell sidebar — Chakra UI Flex + VStack, collapsible on mobile"},{"selector":".search-box","note":"Calls GET /api/products?search={term}"},{"selector":".filter-select","note":"Calls GET /api/products?category={id}, populated from GET /api/categories"},{"selector":".data-table","note":"Chakra UI Table component with custom theme tokens"},{"selector":".btn-primary","note":"data-screen links to Product Form Page for create/edit"},{"selector":".photo-thumb.no-photo","note":"Fallback when photoUrl is null — shows placeholder icon"}];
+    function renderAnnotations() {
+      const container = document.getElementById('mockup-container');
+      annotations.forEach(function(ann) {
+        if (!ann.selector) return;
+        const target = container.querySelector(ann.selector);
+        if (!target) return;
+        const text = ann.note || ann.text || '';
+        if (!text) return;
+        const rect = target.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const tooltip = document.createElement('div');
+        tooltip.className = 'annotation-tooltip';
+        tooltip.textContent = text;
+        tooltip.style.top = (rect.bottom - containerRect.top + 6) + 'px';
+        tooltip.style.left = (rect.left - containerRect.left) + 'px';
+        container.appendChild(tooltip);
+      });
+    }
+    if (annotations.length > 0) requestAnimationFrame(renderAnnotations);
+
+    // Annotation toggle with localStorage persistence
+    var toggleBtn = document.getElementById('annotation-toggle');
+    var container = document.getElementById('mockup-container');
+    var annotationsVisible = localStorage.getItem('annotations-visible') !== 'false'; // default: true
+    function updateToggle() {
+      if (annotationsVisible) {
+        container.classList.remove('annotations-hidden');
+        toggleBtn.classList.add('active');
+      } else {
+        container.classList.add('annotations-hidden');
+        toggleBtn.classList.remove('active');
+      }
+    }
+    updateToggle();
+    toggleBtn.addEventListener('click', function() {
+      annotationsVisible = !annotationsVisible;
+      localStorage.setItem('annotations-visible', annotationsVisible);
+      updateToggle();
+    });
+
+    // Screen-to-screen navigation: clicking elements with data-screen="slug" navigates to that screen
+    document.getElementById('mockup-container').addEventListener('click', function(e) {
+      var target = e.target.closest('[data-screen]');
+      if (target) {
+        e.preventDefault();
+        window.location.href = '/screen/' + target.getAttribute('data-screen');
+      }
+    });
+  </script>
+</body>
+</html>

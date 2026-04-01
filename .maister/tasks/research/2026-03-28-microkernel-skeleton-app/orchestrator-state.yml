@@ -1,0 +1,61 @@
+orchestrator:
+  started_phase: phase-1
+  completed_phases: [phase-1, phase-2, phase-3, phase-4, phase-5, phase-6]
+  failed_phases: []
+  auto_fix_attempts: {}
+  options:
+    brainstorming_enabled: false
+    design_enabled: true
+  created: "2026-03-28T00:00:00Z"
+  updated: "2026-03-28T00:00:00Z"
+  task_path: .maister/tasks/research/2026-03-28-microkernel-skeleton-app
+  task_ids:
+    phase-1: "1"
+    phase-2: "2"
+    phase-3: "3"
+    phase-4: "4"
+    phase-5: "5"
+    phase-6: "6"
+
+task:
+  title: "Microkernel skeleton app with Spring Boot, React, PostgreSQL"
+  description: "Research how to build a sample application showcasing microkernel architecture with Spring Boot backend, React frontend, PostgreSQL in container. No authorization. Frontend and features to be implemented later — just a proper skeleton with all technology running."
+  status: completed
+  tags: [research, architecture, skeleton]
+  priority: medium
+
+research_context:
+  research_type: "mixed"
+  research_question: "How to build a microkernel architecture skeleton app with Spring Boot backend, React frontend, and containerized PostgreSQL — all technology integrated and running, no auth, no business features?"
+  scope:
+    included:
+      - Spring Boot 4.0.5 backend setup
+      - React frontend integration
+      - PostgreSQL in Docker container
+      - Microkernel architecture pattern
+      - Build tooling (Maven)
+      - Development workflow
+    excluded:
+      - Authorization/authentication
+      - Business features/plugins
+      - Production deployment
+      - CI/CD
+    constraints:
+      - Must use existing tech stack (Java 25, Spring Boot 4.0.5, Maven)
+      - Must integrate with existing project structure
+      - Frontend and features will be implemented in next step
+  methodology: [codebase-analysis, literature-review, configuration-analysis]
+  sources: [codebase, spring-docs, architecture-references, docker-docs]
+  confidence_level: "high"
+  gathering_strategy:
+    categories: [codebase-analysis, spring-react-integration, microkernel-patterns, docker-postgres-setup]
+    count: 4
+    source: "planner"
+  phase_summaries:
+    phase-1:
+      summary: "Research foundation complete. 4 gatherers investigated codebase structure, Spring+React integration, microkernel patterns, and Docker PostgreSQL setup. Synthesis identified 6 cross-source connections, 5 patterns, 3 resolved tensions, 0 contradictions. Skeleton requires 9 new files + 3 modifications, using zero additional libraries beyond Spring Boot modules and frontend-maven-plugin. Overall confidence 90-95%."
+      steps_completed: [init, plan, gather, synthesize]
+    phase-5:
+      summary: "High-level design created with C4 Level 1+2 diagrams, 8 components mapped, 4 data flow diagrams, 8 integration points, and 5 MADR-format ADRs covering monorepo structure, frontend tooling, microkernel pattern, database setup, and build integration."
+      architecture_style: "microkernel (plugin-based) with embedded SPA frontend"
+      decisions_count: 5
