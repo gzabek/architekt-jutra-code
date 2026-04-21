@@ -1,0 +1,45 @@
+orchestrator:
+  started_phase: phase-1
+  completed_phases: []
+  failed_phases: []
+  created: "2026-04-19T16:24:00Z"
+  updated: "2026-04-19T16:24:00Z"
+  task_path: .maister/tasks/research/2026-04-19-backend-plugin-aj
+
+task:
+  title: "How to write a backend plugin in the aj application"
+  description: "Research how to write a backend plugin in the aj microkernel platform (Spring Boot 4.0.5 + Java 25)"
+  status: in_progress
+  tags: [research, plugins, backend, java]
+  priority: high
+
+research_context:
+  research_type: technical
+  research_question: "How to write a backend plugin in the aj application?"
+  scope:
+    included:
+      - Plugin descriptor and object model
+      - Plugin registration mechanism
+      - Plugin data layer conventions
+      - Example/existing plugins if any
+      - Integration with Spring Boot context
+    excluded:
+      - Frontend plugin SDK (separate concern)
+      - Performance optimization
+    constraints:
+      - Must follow existing project code style (Java 25, Spring Boot 4.0.5)
+  methodology: []
+  sources: []
+  confidence_level: null
+  gathering_strategy:
+    categories: []
+    count: 0
+    source: default
+  phase_summaries:
+    phase-1:
+      summary: null
+      steps_completed: []
+
+options:
+  brainstorming_enabled: null
+  design_enabled: null

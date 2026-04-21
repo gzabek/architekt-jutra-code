@@ -1,6 +1,22 @@
 import type { CategoryResponse } from "./categories";
 import { api } from "./client";
 
+export type ValidationConfidence = "HIGH" | "MEDIUM" | "LOW";
+
+export interface CheckResult {
+  valid: boolean;
+  suggestion: string;
+  confidence: ValidationConfidence;
+  explanation: string;
+}
+
+export interface ValidationResult {
+  productId: number;
+  categoryValidation: CheckResult;
+  descriptionValidation: CheckResult;
+  priceValidation: CheckResult;
+}
+
 export interface ProductResponse {
   id: number;
   name: string;
@@ -67,4 +83,8 @@ export function updateProduct(id: number, request: UpdateProductRequest): Promis
 
 export function deleteProduct(id: number): Promise<void> {
   return api.delete(`/products/${id}`);
+}
+
+export function validateProduct(id: number): Promise<ValidationResult> {
+  return api.post(`/products/${id}/validate`, {});
 }

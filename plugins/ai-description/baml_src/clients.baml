@@ -5,7 +5,7 @@
 client<llm> LiteLlmProvider {
   provider openai
   options {
-    model "gpt-4o-mini"
+    model "claude-haiku-4.5"
     api_key env.LITELLM_API_KEY
     base_url "http://localhost:4000/v1"
   }

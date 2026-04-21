@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-insert-product-validator-plugin
+      author: aj
+      context: dev
+      changes:
+        - insert:
+            tableName: plugins
+            columns:
+              - column:
+                  name: id
+                  value: product-validator
+              - column:
+                  name: name
+                  value: Product Validator
+              - column:
+                  name: version
+                  value: "1.0.0"
+              - column:
+                  name: url
+                  value: "http://localhost:8080"
+              - column:
+                  name: description
+                  value: "Validates product category, description, and price using an LLM via LiteLLM."
+              - column:
+                  name: enabled
+                  valueBoolean: true
+              - column:
+                  name: manifest
+                  value: '{"name":"Product Validator","version":"1.0.0","url":"http://localhost:8080"}'
+              - column:
+                  name: created_at
+                  valueDate: "now()"
+              - column:
+                  name: updated_at
+                  valueDate: "now()"
+      rollback:
+        - delete:
+            tableName: plugins
+            where: id='product-validator'

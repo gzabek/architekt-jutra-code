@@ -12,8 +12,10 @@ function GenerateProductDescription(
 ) -> ProductDescription {
   client LlmProvider
   prompt #"
+    {{ _.role("system") }}
     You are a product analyst. Analyze the following product and provide a structured description.
 
+    {{ _.role("user") }}
     Product Name: {{ productName }}
     Product Description: {{ productDescription }}
     {% if customInformation %}

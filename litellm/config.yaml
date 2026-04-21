@@ -1,13 +1,8 @@
 model_list:
-  - model_name: gpt-4o-mini
-    litellm_params:
-      model: openai/gpt-4o-mini
-      api_key: os.environ/OPENAI_API_KEY
 
-  - model_name: claude-sonnet
+  - model_name: claude-haiku-4.5
     litellm_params:
-      model: anthropic/claude-sonnet-4-20250514
-      api_key: os.environ/ANTHROPIC_API_KEY
+      model: github_copilot/claude-haiku-4-5
 
 guardrails:
   - guardrail_name: "presidio-pii"

@@ -1,22 +1,59 @@
 import {
+  Badge,
   Box,
+  Button,
   Flex,
   Heading,
   Image,
   Text,
+  TooltipContent,
+  TooltipRoot,
+  TooltipTrigger,
 } from "@chakra-ui/react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getProduct } from "../api/products";
-import type { ProductResponse } from "../api/products";
+import type { CheckResult, ProductResponse } from "../api/products";
 import { usePluginContext } from "../plugins/PluginContext";
 import { PRODUCT_DETAIL_INFO, PRODUCT_DETAIL_TABS } from "../plugins/extensionPoints";
 import { PluginFrame } from "../plugins/PluginFrame";
 import { PhotoPlaceholder } from "../components/shared/Icons";
 import { isValidImageUrl } from "../utils/url";
+import { useProductValidation } from "../hooks/useProductValidation";
 
 function formatPrice(price: number): string {
   return `$${price.toFixed(2)}`;
+}
+
+function badgeColorScheme(result: CheckResult): string {
+  if (result.suggestion === "LLM unavailable") return "gray";
+  if (!result.valid) return "red";
+  if (result.confidence === "HIGH") return "green";
+  return "orange";
+}
+
+function badgeLabel(result: CheckResult): string {
+  if (result.suggestion === "LLM unavailable") return "Unavailable";
+  return result.valid ? "Valid" : "Invalid";
+}
+
+interface ValidationBadgeProps {
+  result: CheckResult;
+}
+
+function ValidationBadge({ result }: ValidationBadgeProps) {
+  const tooltipLabel =
+    result.suggestion && result.suggestion !== result.explanation
+      ? `${result.explanation} ${result.suggestion}`
+      : result.explanation;
+  return (
+    <TooltipRoot>
+      <TooltipTrigger asChild>
+        <Badge colorScheme={badgeColorScheme(result)}>{badgeLabel(result)}</Badge>
+      </TooltipTrigger>
+      <TooltipContent>{tooltipLabel}</TooltipContent>
+    </TooltipRoot>
+  );
 }
 
 export function ProductDetailPage() {
@@ -25,7 +62,7 @@ export function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
-  const { getProductDetailTabs, getProductDetailInfo } = usePluginContext();
+  const { getProductDetailTabs, getProductDetailInfo, isPluginEnabled } = usePluginContext();
 
   const loadProduct = useCallback(async () => {
     if (!id) return;
@@ -44,6 +81,10 @@ export function ProductDetailPage() {
   useEffect(() => {
     void loadProduct();
   }, [loadProduct]);
+
+  const productId = product?.id ?? 0;
+  const { validationResult, isValidating, validate } = useProductValidation(productId);
+  const validatorEnabled = isPluginEnabled("product-validator");
 
   if (loading) return <Text>Loading...</Text>;
   if (error) return <Text color="red.500">{error}</Text>;
@@ -143,9 +184,14 @@ export function ProductDetailPage() {
                   <Text fontSize="12px" fontWeight="600" color="#64748B" textTransform="uppercase">
                     Price
                   </Text>
-                  <Text fontSize="20px" fontWeight="700" color="brand.700">
-                    {formatPrice(product.price)}
-                  </Text>
+                  <Flex align="center" gap="8px">
+                    <Text fontSize="20px" fontWeight="700" color="brand.700">
+                      {formatPrice(product.price)}
+                    </Text>
+                    {validationResult && (
+                      <ValidationBadge result={validationResult.priceValidation} />
+                    )}
+                  </Flex>
                 </Box>
                 <Box>
                   <Text fontSize="12px" fontWeight="600" color="#64748B" textTransform="uppercase">
@@ -159,17 +205,39 @@ export function ProductDetailPage() {
                   <Text fontSize="12px" fontWeight="600" color="#64748B" textTransform="uppercase">
                     Category
                   </Text>
-                  <Text color="#334155">{product.category.name}</Text>
+                  <Flex align="center" gap="8px">
+                    <Text color="#334155">{product.category.name}</Text>
+                    {validationResult && (
+                      <ValidationBadge result={validationResult.categoryValidation} />
+                    )}
+                  </Flex>
                 </Box>
                 {product.description && (
                   <Box>
                     <Text fontSize="12px" fontWeight="600" color="#64748B" textTransform="uppercase">
                       Description
                     </Text>
-                    <Text color="#334155">{product.description}</Text>
+                    <Flex align="center" gap="8px">
+                      <Text color="#334155">{product.description}</Text>
+                      {validationResult && (
+                        <ValidationBadge result={validationResult.descriptionValidation} />
+                      )}
+                    </Flex>
                   </Box>
                 )}
               </Flex>
+              {validatorEnabled && (
+                <Box mt="16px">
+                  <Button
+                    size="sm"
+                    onClick={() => void validate()}
+                    loading={isValidating}
+                    loadingText="Validating…"
+                  >
+                    Validate
+                  </Button>
+                </Box>
+              )}
             </Box>
           </Flex>
         </Box>

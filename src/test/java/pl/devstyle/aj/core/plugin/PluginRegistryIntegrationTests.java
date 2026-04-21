@@ -121,8 +121,8 @@ class PluginRegistryIntegrationTests {
         mockMvc.perform(get("/api/plugins"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].id").value("enabled-plugin"));
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[?(@.id == 'enabled-plugin')]").exists());
     }
 
     @Test
@@ -161,6 +161,7 @@ class PluginRegistryIntegrationTests {
         mockMvc.perform(get("/api/plugins"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[?(@.id == 'product-validator')]").exists());
     }
 }

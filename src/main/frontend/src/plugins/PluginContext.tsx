@@ -21,6 +21,7 @@ interface PluginContextValue {
   getProductDetailTabs: (pluginId?: string) => ResolvedExtensionPoint[];
   getProductListFilters: () => ResolvedExtensionPoint[];
   getProductDetailInfo: () => ResolvedExtensionPoint[];
+  isPluginEnabled: (pluginId: string) => boolean;
 }
 
 const PluginContext = createContext<PluginContextValue | null>(null);
@@ -96,9 +97,14 @@ export function PluginProvider({ children }: { children: ReactNode }) {
     [plugins],
   );
 
+  const isPluginEnabled = useCallback(
+    (pluginId: string) => plugins.some((p) => p.id === pluginId && p.enabled),
+    [plugins],
+  );
+
   const value = useMemo<PluginContextValue>(
-    () => ({ plugins, loading, error, refetch, getMenuItems, getProductDetailTabs, getProductListFilters, getProductDetailInfo }),
-    [plugins, loading, error, refetch, getMenuItems, getProductDetailTabs, getProductListFilters, getProductDetailInfo],
+    () => ({ plugins, loading, error, refetch, getMenuItems, getProductDetailTabs, getProductListFilters, getProductDetailInfo, isPluginEnabled }),
+    [plugins, loading, error, refetch, getMenuItems, getProductDetailTabs, getProductListFilters, getProductDetailInfo, isPluginEnabled],
   );
 
   return <PluginContext value={value}>{children}</PluginContext>;

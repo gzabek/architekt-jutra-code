@@ -1,7 +1,7 @@
 {
   "name": "AI Description",
   "version": "1.0.0",
-  "url": "http://localhost:3003",
+  "url": "http://localhost:3004",
   "description": "Generate AI-powered product descriptions",
   "extensionPoints": [
     {

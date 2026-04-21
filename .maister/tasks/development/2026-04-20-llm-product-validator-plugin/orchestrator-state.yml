@@ -1,0 +1,57 @@
+orchestrator:
+  started_phase: phase-1
+  completed_phases: []
+  failed_phases: []
+  created: "2026-04-20T00:00:00Z"
+  updated: "2026-04-20T00:00:00Z"
+  task_path: .maister/tasks/development/2026-04-20-llm-product-validator-plugin
+  options:
+    spec_audit_enabled: true
+    skip_test_suite: false
+    e2e_enabled: false
+    user_docs_enabled: false
+    code_review_enabled: true
+    pragmatic_review_enabled: true
+    reality_check_enabled: true
+    production_check_enabled: false
+
+task:
+  title: "LLM Product Validator Plugin (LiteLLM + BAML)"
+  description: "Write a backend plugin that integrates with LLM via LiteLLM and BAML. The plugin suggests if a given assigned product category is correct, checks if product description is accurate, and verifies if product price is similar to what is available on the market."
+  status: in_progress
+  tags: [plugin, llm, litellm, baml, product-validation, backend]
+  priority: high
+
+task_context:
+  risk_level: medium
+  clarifications_resolved: false
+  scope_expanded: null
+  architecture_decision: null
+  task_characteristics:
+    has_reproducible_defect: false
+    modifies_existing_code: false
+    creates_new_entities: true
+    involves_data_operations: true
+    ui_heavy: false
+  research_reference:
+    path: .maister/tasks/research/2026-04-19-backend-plugin-aj
+    research_question: "How to write a backend plugin in the aj application?"
+    research_type: technical
+    confidence_level: high
+  phase_summaries:
+    research:
+      summary: "The aj application uses REST-based, out-of-process plugins. New backend logic requiring LLM integration should be implemented as a new domain package inside the aj monolith (Track C: src/main/java/pl/devstyle/aj/<domain>/). Plugins with backend server logic use Next.js API routes + server-sdk.ts pattern. For an LLM validator, either a standalone Next.js plugin server or a new monolith domain package can be used."
+      key_findings:
+        - "Plugin Track C (new domain in monolith) is the right choice when first-class entities are needed"
+        - "Plugin Track B (Next.js + custom backend server) is preferred for external API integration, AI features"
+        - "Standard entities extend BaseEntity, use Liquibase for migrations"
+        - "Tests must use Testcontainers with real PostgreSQL"
+        - "BAML and LiteLLM are Python-centric; Java Spring integration requires HTTP proxy or jBAML/Java client"
+      recommended_approach: "Track B (Next.js backend server + server-sdk.ts) calling LiteLLM proxy, OR a new Java service in the monolith that calls LiteLLM HTTP API via WebClient"
+    codebase_analysis:
+      key_files: []
+      primary_language: Java
+      summary: null
+    gap_analysis:
+      integration_points: []
+      summary: null

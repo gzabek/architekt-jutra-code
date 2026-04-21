@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ChakraProvider } from "@chakra-ui/react";
 import { system } from "../theme";
 import type { CategoryResponse } from "../api/categories";
-import type { ProductResponse } from "../api/products";
+import type { ProductResponse, ValidationResult } from "../api/products";
+import type { PluginResponse } from "../api/plugins";
 import * as categoriesApi from "../api/categories";
 import * as productsApi from "../api/products";
 import { PluginProvider } from "../plugins/PluginContext";
@@ -39,6 +40,7 @@ vi.mock("../api/products", () => ({
   createProduct: vi.fn(),
   updateProduct: vi.fn(),
   deleteProduct: vi.fn(),
+  validateProduct: vi.fn(),
 }));
 
 vi.mock("../api/plugins", () => ({
@@ -134,6 +136,137 @@ describe("CategoryFormPage", () => {
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
     expect(screen.getByText(/unique/i)).toBeInTheDocument();
+  });
+});
+
+// ─── Product Validator plugin fixtures ───────────────────────────────────────
+
+const mockProductValidatorPlugin: PluginResponse = {
+  id: "product-validator",
+  name: "Product Validator",
+  version: "1.0.0",
+  url: "http://localhost:9001",
+  description: null,
+  enabled: true,
+  extensionPoints: [],
+};
+
+const mockValidationResult: ValidationResult = {
+  productId: 1,
+  categoryValidation:    { valid: true,  confidence: "HIGH",   suggestion: "",                  explanation: "Category matches product" },
+  descriptionValidation: { valid: true,  confidence: "HIGH",   suggestion: "",                  explanation: "Description is accurate" },
+  priceValidation:       { valid: true,  confidence: "HIGH",   suggestion: "",                  explanation: "Price is reasonable" },
+};
+
+// ─── ProductDetailPage validation ────────────────────────────────────────────
+
+function renderDetailPage(ProductDetailPage: React.ComponentType) {
+  return render(
+    <ChakraProvider value={system}>
+      <PluginProvider>
+        <MemoryRouter initialEntries={["/products/1"]}>
+          <Routes>
+            <Route path="/products/:id" element={<ProductDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </PluginProvider>
+    </ChakraProvider>,
+  );
+}
+
+describe("ProductDetailPage validation", () => {
+  it("does not render Validate button when product-validator plugin is disabled", async () => {
+    vi.mocked(pluginsApi.getPlugins).mockResolvedValue([]);
+    const { ProductDetailPage } = await import("../pages/ProductDetailPage");
+    renderDetailPage(ProductDetailPage);
+    await screen.findByRole("heading", { name: "Wireless Headphones Pro" });
+    expect(screen.queryByRole("button", { name: /validate/i })).not.toBeInTheDocument();
+  });
+
+  it("renders Validate button when product-validator plugin is enabled", async () => {
+    vi.mocked(pluginsApi.getPlugins).mockResolvedValue([mockProductValidatorPlugin]);
+    const { ProductDetailPage } = await import("../pages/ProductDetailPage");
+    renderDetailPage(ProductDetailPage);
+    expect(await screen.findByRole("button", { name: /validate/i })).toBeInTheDocument();
+    expect(screen.queryByText("Valid")).not.toBeInTheDocument();
+  });
+
+  it("disables button with loading text while validation is in flight", async () => {
+    vi.mocked(pluginsApi.getPlugins).mockResolvedValue([mockProductValidatorPlugin]);
+    vi.mocked(productsApi.validateProduct).mockReturnValue(new Promise(() => {}));
+    const { ProductDetailPage } = await import("../pages/ProductDetailPage");
+    renderDetailPage(ProductDetailPage);
+    const btn = await screen.findByRole("button", { name: /validate/i });
+    fireEvent.click(btn);
+    expect(screen.getByText(/validating/i)).toBeInTheDocument();
+  });
+
+  it("shows three Valid badges after successful HIGH confidence validation", async () => {
+    vi.mocked(pluginsApi.getPlugins).mockResolvedValue([mockProductValidatorPlugin]);
+    vi.mocked(productsApi.validateProduct).mockResolvedValue(mockValidationResult);
+    const { ProductDetailPage } = await import("../pages/ProductDetailPage");
+    renderDetailPage(ProductDetailPage);
+    fireEvent.click(await screen.findByRole("button", { name: /validate/i }));
+    expect(await screen.findAllByText("Valid")).toHaveLength(3);
+  });
+
+  it("shows Invalid badge when a field has valid: false", async () => {
+    vi.mocked(pluginsApi.getPlugins).mockResolvedValue([mockProductValidatorPlugin]);
+    vi.mocked(productsApi.validateProduct).mockResolvedValue({
+      ...mockValidationResult,
+      categoryValidation: { valid: false, confidence: "HIGH", suggestion: "Wrong category", explanation: "Does not match" },
+    });
+    const { ProductDetailPage } = await import("../pages/ProductDetailPage");
+    renderDetailPage(ProductDetailPage);
+    fireEvent.click(await screen.findByRole("button", { name: /validate/i }));
+    expect(await screen.findByText("Invalid")).toBeInTheDocument();
+  });
+
+  it("renders Valid badge for MEDIUM confidence result", async () => {
+    vi.mocked(pluginsApi.getPlugins).mockResolvedValue([mockProductValidatorPlugin]);
+    vi.mocked(productsApi.validateProduct).mockResolvedValue({
+      ...mockValidationResult,
+      priceValidation: { valid: true, confidence: "MEDIUM", suggestion: "", explanation: "Price is acceptable" },
+    });
+    const { ProductDetailPage } = await import("../pages/ProductDetailPage");
+    renderDetailPage(ProductDetailPage);
+    fireEvent.click(await screen.findByRole("button", { name: /validate/i }));
+    expect(await screen.findAllByText("Valid")).toHaveLength(3);
+  });
+
+  it("shows Unavailable badge when LLM is unavailable", async () => {
+    vi.mocked(pluginsApi.getPlugins).mockResolvedValue([mockProductValidatorPlugin]);
+    vi.mocked(productsApi.validateProduct).mockResolvedValue({
+      ...mockValidationResult,
+      categoryValidation: { valid: false, confidence: "LOW", suggestion: "LLM unavailable", explanation: "Service offline" },
+    });
+    const { ProductDetailPage } = await import("../pages/ProductDetailPage");
+    renderDetailPage(ProductDetailPage);
+    fireEvent.click(await screen.findByRole("button", { name: /validate/i }));
+    expect(await screen.findByText("Unavailable")).toBeInTheDocument();
+  });
+
+  it("shows no badges and re-enables button when API call fails", async () => {
+    vi.mocked(pluginsApi.getPlugins).mockResolvedValue([mockProductValidatorPlugin]);
+    vi.mocked(productsApi.validateProduct).mockRejectedValue(new Error("Network error"));
+    const { ProductDetailPage } = await import("../pages/ProductDetailPage");
+    renderDetailPage(ProductDetailPage);
+    const btn = await screen.findByRole("button", { name: /validate/i });
+    fireEvent.click(btn);
+    await waitFor(() => expect(screen.getByRole("button", { name: /validate/i })).not.toBeDisabled());
+    expect(screen.queryByText("Valid")).not.toBeInTheDocument();
+    expect(screen.queryByText("Invalid")).not.toBeInTheDocument();
+  });
+
+  it("does not render description badge when product has no description", async () => {
+    vi.mocked(pluginsApi.getPlugins).mockResolvedValue([mockProductValidatorPlugin]);
+    vi.mocked(productsApi.getProduct).mockResolvedValue({ ...mockProducts[0]!, description: null });
+    vi.mocked(productsApi.validateProduct).mockResolvedValue(mockValidationResult);
+    const { ProductDetailPage } = await import("../pages/ProductDetailPage");
+    renderDetailPage(ProductDetailPage);
+    fireEvent.click(await screen.findByRole("button", { name: /validate/i }));
+    // 2 badges: category + price; no description badge
+    expect(await screen.findAllByText("Valid")).toHaveLength(2);
   });
 });
 

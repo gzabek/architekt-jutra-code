@@ -1,0 +1,62 @@
+orchestrator:
+  started_phase: phase-1
+  completed_phases: []
+  failed_phases: []
+  created: "2026-04-20T14:07:00Z"
+  updated: "2026-04-20T14:07:00Z"
+  task_path: .maister/tasks/development/2026-04-20-llm-category-suggestion-plugin
+  options:
+    spec_audit_enabled: null
+    skip_test_suite: false
+    e2e_enabled: false
+    user_docs_enabled: false
+    code_review_enabled: true
+    pragmatic_review_enabled: true
+    reality_check_enabled: true
+    production_check_enabled: false
+
+task:
+  title: "LLM Category Suggestion Plugin"
+  description: "Write a backend plugin that integrates with LLM via LiteLLM and BAML. Such plugin will suggest if given assigned product category is correct."
+  status: in_progress
+  tags: [plugin, llm, litellm, baml, category, java, spring-boot]
+  priority: high
+
+task_context:
+  risk_level: null
+  clarifications_resolved: null
+  scope_expanded: null
+  architecture_decision: null
+  task_characteristics:
+    has_reproducible_defect: false
+    modifies_existing_code: false
+    creates_new_entities: true
+    involves_data_operations: true
+    ui_heavy: false
+  research_reference:
+    path: .maister/tasks/research/2026-04-19-backend-plugin-aj
+    research_question: "How to write a backend plugin in the aj application?"
+    research_type: technical
+    confidence_level: high
+  phase_summaries:
+    research:
+      summary: "The aj application uses a REST-based out-of-process plugin architecture. Plugins are either frontend-only (no server), full-stack (Next.js), or new domain packages added directly to the monolith Java source. For LLM integration needing server-side secrets and external API calls, Track B (plugin with custom backend server) is appropriate, combined with Track C (new domain entity) if persisting suggestions."
+      key_findings:
+        - "Backend plugin = Track B (Next.js server) + optionally Track C (new Java domain)"
+        - "Plugin registers via PUT /api/plugins/{id}/manifest"
+        - "Server-side API calls use server-sdk.ts to forward user JWT"
+        - "Plugin objects stored in plugin_objects table (JSONB)"
+        - "New Java domain: entity + repo + service + controller + migration + tests"
+      recommended_approach: "Track B with Next.js API route calling LiteLLM/BAML, storing suggestions as plugin objects"
+    codebase_analysis: {key_files: [], primary_language: null, summary: null}
+    clarifications: []
+    gap_analysis: {integration_points: [], summary: null}
+    scope_clarifications: {scope_expanded: null, summary: null}
+    specification: {summary: null}
+
+verification_context:
+  last_status: null
+  issues_found: []
+  fixes_applied: []
+  decisions_made: []
+  reverify_count: 0
