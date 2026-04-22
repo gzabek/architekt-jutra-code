@@ -42,6 +42,41 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    private static final long OAUTH2_TOKEN_EXPIRATION_MS = 900_000; // 15 minutes
+
+    public String generateOAuth2Token(String username, Set<String> scopes, String issuer) {
+        return generateOAuth2Token(username, scopes, issuer, null);
+    }
+
+    public String generateOAuth2Token(String username, Set<String> scopes, String issuer, String audience) {
+        var now = new Date();
+        var expiry = new Date(now.getTime() + OAUTH2_TOKEN_EXPIRATION_MS);
+        var builder = Jwts.builder()
+                .issuer(issuer)
+                .subject(username)
+                .claim("scopes", List.copyOf(scopes))
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(secretKey);
+        if (audience != null) {
+            builder.audience().add(audience);
+        }
+        return builder.compact();
+    }
+
+    public Optional<Claims> parseRawClaims(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return Optional.of(claims);
+        } catch (JwtException | IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
     public record ParsedToken(String username, Set<String> permissions) {}
 
     /**
@@ -59,6 +94,12 @@ public class JwtTokenProvider {
                     .getPayload();
             String username = claims.getSubject();
             List<String> permissions = claims.get("permissions", List.class);
+            if (permissions == null) {
+                permissions = claims.get("scopes", List.class);
+            }
+            if (permissions == null) {
+                permissions = List.of();
+            }
             return Optional.of(new ParsedToken(username, Set.copyOf(permissions)));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
