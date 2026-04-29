@@ -15,7 +15,9 @@ public enum OAuth2Error {
     INVALID_GRANT("invalid_grant", "The provided authorization grant or refresh token is invalid, expired, revoked, does not match the redirection URI used in the authorization request, or was issued to another client"),
     UNSUPPORTED_GRANT_TYPE("unsupported_grant_type", "The authorization grant type is not supported by the authorization server"),
 
-    INVALID_CLIENT_METADATA("invalid_client_metadata", "The value of one or more client metadata fields is invalid");
+    INVALID_CLIENT_METADATA("invalid_client_metadata", "The value of one or more client metadata fields is invalid"),
+
+    INVALID_TARGET("invalid_target", "The requested audience is not permitted for token exchange");
 
     private final String error;
     private final String description;

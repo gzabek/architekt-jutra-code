@@ -22,6 +22,13 @@ import java.util.Arrays;
  * Security filter that validates incoming Bearer tokens via RFC 7662 introspection
  * against the backend, then exchanges them for backend-scoped Token-B via RFC 8693.
  * Replaces the old trust-and-forward McpJwtFilter.
+ *
+ * <p>Token-B is placed into {@link ExchangedTokenHolder} (ThreadLocal) so that the
+ * {@code TokenBForwardingInterceptor} in RestClientConfig can attach it to outgoing
+ * backend API calls without needing access to the servlet request.
+ *
+ * <p>The introspection response {@code aud} claim is validated against this server's
+ * own URI to ensure Token-A was intended for the MCP server.
  */
 @Slf4j
 public class McpIntrospectionFilter extends OncePerRequestFilter {
@@ -36,18 +43,21 @@ public class McpIntrospectionFilter extends OncePerRequestFilter {
     private final McpAuthenticationEntryPoint authenticationEntryPoint;
     private final String clientId;
     private final String clientSecret;
+    private final String mcpServerUri;
     private final ObjectMapper objectMapper;
 
     public McpIntrospectionFilter(RestClient oauthRestClient,
                                   TokenExchangeClient tokenExchangeClient,
                                   McpAuthenticationEntryPoint authenticationEntryPoint,
                                   String clientId,
-                                  String clientSecret) {
+                                  String clientSecret,
+                                  String mcpServerUri) {
         this.oauthRestClient = oauthRestClient;
         this.tokenExchangeClient = tokenExchangeClient;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.mcpServerUri = mcpServerUri;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -80,6 +90,30 @@ public class McpIntrospectionFilter extends OncePerRequestFilter {
                 return;
             }
 
+            // Step 2: Validate aud claim from introspection response -- Token-A must be
+            // intended for this MCP server to prevent token confusion attacks.
+            JsonNode audNode = introspectionResult.path("aud");
+            if (!audNode.isMissingNode() && !audNode.isNull()) {
+                boolean audMatches = false;
+                if (audNode.isArray()) {
+                    for (JsonNode entry : audNode) {
+                        if (mcpServerUri.equals(entry.asText())) {
+                            audMatches = true;
+                            break;
+                        }
+                    }
+                } else {
+                    audMatches = mcpServerUri.equals(audNode.asText());
+                }
+                if (!audMatches) {
+                    log.warn("Token aud claim does not match this server ({}) -- rejecting", mcpServerUri);
+                    rejectUnauthorized(request, response);
+                    return;
+                }
+            }
+            // If no aud claim is present, the token is not audience-restricted -- allow it through.
+            // This preserves backward compatibility with tokens issued before audience enforcement.
+
             // Extract principal and authorities from introspection response
             String subject = introspectionResult.path("sub").asText();
             String scope = introspectionResult.path("scope").asText("");
@@ -88,7 +122,7 @@ public class McpIntrospectionFilter extends OncePerRequestFilter {
                     .map(s -> new SimpleGrantedAuthority("PERMISSION_" + s))
                     .toList();
 
-            // Step 2: Exchange Token-A for Token-B
+            // Step 3: Exchange Token-A for Token-B
             String tokenB;
             try {
                 tokenB = tokenExchangeClient.exchange(tokenA);
@@ -98,8 +132,10 @@ public class McpIntrospectionFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // Store Token-B as request attribute for RestClient interceptor
+            // Store Token-B as request attribute (for reference / testing) and in the
+            // ThreadLocal so RestClient interceptor can attach it to backend API calls.
             request.setAttribute(EXCHANGED_TOKEN_ATTRIBUTE, tokenB);
+            ExchangedTokenHolder.set(tokenB);
 
             // Set SecurityContext for downstream handlers
             var authentication = new UsernamePasswordAuthenticationToken(subject, null, authorities);
@@ -108,6 +144,7 @@ public class McpIntrospectionFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } finally {
             SecurityContextHolder.clearContext();
+            ExchangedTokenHolder.clear();
         }
     }
 

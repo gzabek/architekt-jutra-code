@@ -14,9 +14,11 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final String resourceUri;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, String resourceUri) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.resourceUri = resourceUri;
     }
 
     @Override
@@ -26,6 +28,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null) {
             jwtTokenProvider.parseToken(token).ifPresent(parsed -> {
+                // RFC 8707: when the token carries an aud claim, it must contain this server's
+                // resource URI. Tokens without aud are accepted (user tokens never carry aud).
+                var aud = parsed.audience();
+                if (!aud.isEmpty() && !aud.contains(resourceUri)) {
+                    return; // audience mismatch — do not authenticate
+                }
+
                 var authorities = parsed.permissions().stream()
                         .map(p -> new SimpleGrantedAuthority("PERMISSION_" + p))
                         .toList();

@@ -1,0 +1,43 @@
+orchestrator:
+  started_phase: phase-1
+  completed_phases: []
+  failed_phases: []
+  created: "2026-04-27T11:22:00Z"
+  updated: "2026-04-27T11:22:00Z"
+  task_path: .maister/tasks/research/2026-04-27-mcp-server-auth-no-token-passthrough
+
+task:
+  title: "MCP Server Authentication Without Token Passthrough"
+  description: "How should our MCP server handle authentication without token passthrough, per MCP spec?"
+  status: in_progress
+  tags: [mcp, authentication, security, oauth]
+  priority: high
+
+research_context:
+  research_type: mixed
+  research_question: "How should our MCP server handle authentication without token passthrough, per MCP spec?"
+  scope:
+    included:
+      - MCP specification authentication requirements
+      - OAuth 2.0 flows applicable to MCP
+      - Authorization server metadata discovery
+      - Dynamic client registration
+      - Token exchange patterns without passthrough
+      - MCP server-side auth implementation patterns
+    excluded:
+      - Token passthrough patterns (explicitly not desired)
+      - Non-MCP protocols
+    constraints:
+      - Must follow official MCP specification
+      - Spring Boot / Java 25 backend context
+  methodology: []
+  sources: []
+  confidence_level: null
+  gathering_strategy:
+    categories: []
+    count: 0
+    source: default
+
+options:
+  brainstorming_enabled: null
+  design_enabled: null

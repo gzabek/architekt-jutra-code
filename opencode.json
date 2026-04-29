@@ -14,5 +14,11 @@
     "C:/source/maister/plugins/maister-copilot/skills/standards-update/SKILL.md",
     "C:/source/maister/plugins/maister-copilot/skills/init/SKILL.md",
     "C:/source/maister/plugins/maister-copilot/skills/orchestrator-framework/SKILL.md"
-  ]
+  ],
+  "mcp": {
+    "my-local-mcp": {
+      "type": "remote",
+      "url": "http://localhost:8081"
+    }
+  }
 }

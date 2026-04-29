@@ -3,13 +3,13 @@ package pl.devstyle.aj.mcp.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -28,6 +28,7 @@ class McpIntrospectionFilterTests {
     private static final String CLIENT_SECRET = "mcp-secret";
     private static final String OAUTH_SERVER_URL = "http://localhost:8080";
     private static final String RESOURCE_METADATA_URL = "http://localhost:8081/.well-known/oauth-protected-resource";
+    private static final String MCP_SERVER_URI = "http://localhost:8081";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -49,9 +50,17 @@ class McpIntrospectionFilterTests {
                 tokenExchangeClient,
                 new McpAuthenticationEntryPoint(RESOURCE_METADATA_URL),
                 CLIENT_ID,
-                CLIENT_SECRET
+                CLIENT_SECRET,
+                MCP_SERVER_URI
         );
 
+        SecurityContextHolder.clearContext();
+        ExchangedTokenHolder.clear();
+    }
+
+    @AfterEach
+    void tearDown() {
+        ExchangedTokenHolder.clear();
         SecurityContextHolder.clearContext();
     }
 
@@ -78,17 +87,59 @@ class McpIntrospectionFilterTests {
 
         verify(filterChain).doFilter(request, response);
 
-        // SecurityContext cleared in finally block after filter chain completes
+        // SecurityContext and ExchangedTokenHolder are cleared in finally block after filter chain
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(ExchangedTokenHolder.get()).isNull();
 
-        // Token-B stored as request attribute
+        // Token-B still stored as request attribute
         assertThat(request.getAttribute("exchanged_token")).isEqualTo("token-B");
 
-        // Verify the filter chain was invoked (authentication was set during the chain)
-        verify(filterChain).doFilter(argThat(req -> {
-            // By the time we're here, the filter has already run and cleared context
-            return true;
-        }), eq(response));
+        mockServer.verify();
+    }
+
+    @Test
+    void doFilter_successfulFlow_populatesExchangedTokenHolderDuringFilterChainExecution() throws ServletException, IOException {
+        var introspectionResponse = Map.of(
+                "active", true,
+                "sub", "john",
+                "scope", "mcp:read mcp:edit"
+        );
+        mockServer.expect(requestTo(OAUTH_SERVER_URL + "/oauth2/introspect"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(introspectionResponse), MediaType.APPLICATION_JSON));
+
+        when(tokenExchangeClient.exchange("my-token")).thenReturn("exchanged-token-B");
+
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer my-token");
+        var response = new MockHttpServletResponse();
+
+        var filterChain = mock(FilterChain.class);
+        doAnswer(invocation -> {
+            // During filter chain execution Token-B must be in the ThreadLocal
+            assertThat(ExchangedTokenHolder.get()).isEqualTo("exchanged-token-B");
+
+            var auth = SecurityContextHolder.getContext().getAuthentication();
+            assertThat(auth).isNotNull();
+            assertThat(auth.getName()).isEqualTo("john");
+            var authorityNames = auth.getAuthorities().stream()
+                    .map(Object::toString).toList();
+            assertThat(authorityNames).containsExactlyInAnyOrder(
+                    "PERMISSION_mcp:read", "PERMISSION_mcp:edit"
+            );
+
+            // Token-B also in request attribute
+            var tokenB = ((MockHttpServletRequest) invocation.getArgument(0)).getAttribute("exchanged_token");
+            assertThat(tokenB).isEqualTo("exchanged-token-B");
+            return null;
+        }).when(filterChain).doFilter(any(), any());
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        // After filter completes, both are cleared
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(ExchangedTokenHolder.get()).isNull();
 
         mockServer.verify();
     }
@@ -111,6 +162,7 @@ class McpIntrospectionFilterTests {
         assertThat(response.getHeader("WWW-Authenticate")).contains("resource_metadata");
         verifyNoInteractions(filterChain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(ExchangedTokenHolder.get()).isNull();
 
         mockServer.verify();
     }
@@ -131,7 +183,7 @@ class McpIntrospectionFilterTests {
     }
 
     @Test
-    void doFilter_introspectionSucceedsButExchangeFails_returns502AndClearsSecurityContext() throws ServletException, IOException {
+    void doFilter_introspectionSucceedsButExchangeFails_returns502AndClearsHolders() throws ServletException, IOException {
         var introspectionResponse = Map.of(
                 "active", true,
                 "sub", "john",
@@ -153,16 +205,92 @@ class McpIntrospectionFilterTests {
         assertThat(response.getStatus()).isEqualTo(502);
         verifyNoInteractions(filterChain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(ExchangedTokenHolder.get()).isNull();
 
         mockServer.verify();
     }
 
-    // --- Gap-filling tests (Group 6) ---
+    @Test
+    void doFilter_tokenWithMatchingAud_allowsRequest() throws ServletException, IOException {
+        var introspectionResponse = Map.of(
+                "active", true,
+                "sub", "john",
+                "scope", "mcp:read",
+                "aud", MCP_SERVER_URI
+        );
+        mockServer.expect(requestTo(OAUTH_SERVER_URL + "/oauth2/introspect"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(introspectionResponse), MediaType.APPLICATION_JSON));
+
+        when(tokenExchangeClient.exchange("token-A")).thenReturn("token-B");
+
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer token-A");
+        var response = new MockHttpServletResponse();
+        var filterChain = mock(FilterChain.class);
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        verify(filterChain).doFilter(request, response);
+        mockServer.verify();
+    }
+
+    @Test
+    void doFilter_tokenWithWrongAud_returns401() throws ServletException, IOException {
+        var introspectionResponse = Map.of(
+                "active", true,
+                "sub", "john",
+                "scope", "mcp:read",
+                "aud", "https://some-other-server.example.com"
+        );
+        mockServer.expect(requestTo(OAUTH_SERVER_URL + "/oauth2/introspect"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(introspectionResponse), MediaType.APPLICATION_JSON));
+
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer token-A");
+        var response = new MockHttpServletResponse();
+        var filterChain = mock(FilterChain.class);
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getHeader("WWW-Authenticate")).contains("resource_metadata");
+        verifyNoInteractions(filterChain);
+        assertThat(ExchangedTokenHolder.get()).isNull();
+        mockServer.verify();
+    }
+
+    @Test
+    void doFilter_tokenWithNoAud_allowsRequest() throws ServletException, IOException {
+        // Tokens without aud are not audience-restricted -- allowed for backward compatibility
+        var introspectionResponse = Map.of(
+                "active", true,
+                "sub", "john",
+                "scope", "mcp:read"
+                // no "aud" key
+        );
+        mockServer.expect(requestTo(OAUTH_SERVER_URL + "/oauth2/introspect"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(introspectionResponse), MediaType.APPLICATION_JSON));
+
+        when(tokenExchangeClient.exchange("token-A")).thenReturn("token-B");
+
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer token-A");
+        var response = new MockHttpServletResponse();
+        var filterChain = mock(FilterChain.class);
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        verify(filterChain).doFilter(request, response);
+        mockServer.verify();
+    }
 
     @Test
     void doFilter_introspectionServerError_returns401AsInactive() throws ServletException, IOException {
-        // When the introspection endpoint returns a server error, the filter treats it as
-        // an inactive token (the introspect() method catches the exception and returns null)
         mockServer.expect(requestTo(OAUTH_SERVER_URL + "/oauth2/introspect"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withServerError());
@@ -194,49 +322,5 @@ class McpIntrospectionFilterTests {
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getHeader("WWW-Authenticate")).contains("resource_metadata");
         verifyNoInteractions(filterChain);
-    }
-
-    @Test
-    void doFilter_successfulFlow_interceptorAttachesTokenBFromRequestAttribute() throws ServletException, IOException {
-        var introspectionResponse = Map.of(
-                "active", true,
-                "sub", "john",
-                "scope", "mcp:read mcp:edit"
-        );
-        mockServer.expect(requestTo(OAUTH_SERVER_URL + "/oauth2/introspect"))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess(objectMapper.writeValueAsString(introspectionResponse), MediaType.APPLICATION_JSON));
-
-        when(tokenExchangeClient.exchange("my-token")).thenReturn("exchanged-token-B");
-
-        var request = new MockHttpServletRequest();
-        request.addHeader("Authorization", "Bearer my-token");
-        var response = new MockHttpServletResponse();
-
-        // Capture the authentication set during filter chain execution
-        var filterChain = mock(FilterChain.class);
-        doAnswer(invocation -> {
-            var auth = SecurityContextHolder.getContext().getAuthentication();
-            assertThat(auth).isNotNull();
-            assertThat(auth.getName()).isEqualTo("john");
-            var authorityNames = auth.getAuthorities().stream()
-                    .map(Object::toString).toList();
-            assertThat(authorityNames).containsExactlyInAnyOrder(
-                    "PERMISSION_mcp:read", "PERMISSION_mcp:edit"
-            );
-
-            // Verify Token-B stored as request attribute
-            var tokenB = ((MockHttpServletRequest) invocation.getArgument(0)).getAttribute("exchanged_token");
-            assertThat(tokenB).isEqualTo("exchanged-token-B");
-            return null;
-        }).when(filterChain).doFilter(any(), any());
-
-        filter.doFilterInternal(request, response, filterChain);
-
-        verify(filterChain).doFilter(request, response);
-        // After filter completes, context is cleared
-        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-
-        mockServer.verify();
     }
 }

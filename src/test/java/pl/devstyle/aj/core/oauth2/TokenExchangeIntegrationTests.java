@@ -204,8 +204,6 @@ class TokenExchangeIntegrationTests {
                 .andExpect(jsonPath("$.token_type").value("Bearer"));
     }
 
-    // --- Gap-filling tests (Group 6) ---
-
     @Test
     void tokenExchange_allUnknownScopes_returnsTokenWithEmptyPermissions() throws Exception {
         var client = registerConfidentialClient();
@@ -260,4 +258,51 @@ class TokenExchangeIntegrationTests {
         assert permissions.contains("EDIT") : "Expected EDIT from mcp:edit in subject token";
     }
 
+    @Test
+    void tokenExchange_withAudienceParam_tokenBContainsAudienceClaim() throws Exception {
+        var client = registerConfidentialClient();
+        var clientId = client[0];
+        var clientSecret = client[1];
+        var subjectToken = generateTokenA();
+        var audience = "http://localhost:8081"; // must be in app.oauth2.allowed-exchange-audiences
+
+        var result = mockMvc.perform(post("/oauth2/token")
+                        .param("grant_type", TOKEN_EXCHANGE_GRANT_TYPE)
+                        .param("subject_token", subjectToken)
+                        .param("subject_token_type", ACCESS_TOKEN_TYPE)
+                        .param("audience", audience)
+                        .param("client_id", clientId)
+                        .param("client_secret", clientSecret))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.access_token").value(notNullValue()))
+                .andReturn();
+
+        // Decode Token-B and verify aud = audience param value
+        var tokenJson = objectMapper.readTree(result.getResponse().getContentAsString());
+        var tokenB = tokenJson.get("access_token").asText();
+        var parts = tokenB.split("\\.");
+        var payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+        var payloadJson = objectMapper.readTree(payload);
+        var aud = payloadJson.get("aud");
+        org.assertj.core.api.Assertions.assertThat(aud).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(aud.toString()).contains(audience);
+    }
+
+    @Test
+    void tokenExchange_withNotAllowedAudience_returnsInvalidTarget() throws Exception {
+        var client = registerConfidentialClient();
+        var clientId = client[0];
+        var clientSecret = client[1];
+        var subjectToken = generateTokenA();
+
+        mockMvc.perform(post("/oauth2/token")
+                        .param("grant_type", TOKEN_EXCHANGE_GRANT_TYPE)
+                        .param("subject_token", subjectToken)
+                        .param("subject_token_type", ACCESS_TOKEN_TYPE)
+                        .param("audience", "https://not-allowed.example.com")
+                        .param("client_id", clientId)
+                        .param("client_secret", clientSecret))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("invalid_target"));
+    }
 }

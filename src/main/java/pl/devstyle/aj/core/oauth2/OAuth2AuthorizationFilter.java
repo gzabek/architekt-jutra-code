@@ -15,6 +15,7 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.net.URI;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
@@ -71,6 +72,7 @@ public class OAuth2AuthorizationFilter extends OncePerRequestFilter {
         String state = request.getParameter("state");
         String codeChallenge = request.getParameter("code_challenge");
         String codeChallengeMethod = request.getParameter("code_challenge_method");
+        String resourceUri = request.getParameter("resource");
 
         if (clientId == null || redirectUri == null || responseType == null) {
             throw new IllegalArgumentException("Missing required parameters: client_id, redirect_uri, response_type");
@@ -88,6 +90,7 @@ public class OAuth2AuthorizationFilter extends OncePerRequestFilter {
         validateRedirectUri(redirectUri, client);
         validateScopes(scope, client);
         validatePkceParameters(codeChallenge, codeChallengeMethod, client);
+        validateResourceUri(resourceUri);
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -105,7 +108,7 @@ public class OAuth2AuthorizationFilter extends OncePerRequestFilter {
 
         authorizationCodeService.storeAuthorizationCode(
                 authorizationCode, clientId, redirectUri, scope,
-                codeChallenge, codeChallengeMethod, username, permissions
+                codeChallenge, codeChallengeMethod, username, permissions, resourceUri
         );
 
         String redirectUrl = redirectUri + "?code=" + authorizationCode;
@@ -170,6 +173,23 @@ public class OAuth2AuthorizationFilter extends OncePerRequestFilter {
             if (!codeChallenge.matches("^[A-Za-z0-9_-]+$")) {
                 throw new IllegalArgumentException("Invalid code_challenge format. Must be base64url-encoded");
             }
+        }
+    }
+
+    private void validateResourceUri(String resourceUri) {
+        if (resourceUri == null) {
+            return; // resource param is optional (RFC 8707)
+        }
+        try {
+            var uri = URI.create(resourceUri);
+            if (!uri.isAbsolute()) {
+                throw new IllegalArgumentException("resource parameter must be an absolute URI (RFC 8707)");
+            }
+            if (uri.getFragment() != null) {
+                throw new IllegalArgumentException("resource parameter must not contain a fragment component (RFC 8707)");
+            }
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid resource parameter: " + e.getMessage());
         }
     }
 

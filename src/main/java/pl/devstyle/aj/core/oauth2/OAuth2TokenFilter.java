@@ -19,9 +19,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class OAuth2TokenFilter extends OncePerRequestFilter {
@@ -42,13 +42,15 @@ public class OAuth2TokenFilter extends OncePerRequestFilter {
     private final PasswordEncoder passwordEncoder;
     private final OAuth2ClientAuthenticator clientAuthenticator;
     private final ObjectMapper objectMapper;
+    private final Set<String> allowedExchangeAudiences;
 
     public OAuth2TokenFilter(RegisteredClientRepository registeredClientRepository,
                              AuthorizationCodeService authorizationCodeService,
                              RefreshTokenService refreshTokenService,
                              JwtTokenProvider jwtTokenProvider,
                              PasswordEncoder passwordEncoder,
-                             OAuth2ClientAuthenticator clientAuthenticator) {
+                             OAuth2ClientAuthenticator clientAuthenticator,
+                             List<String> allowedExchangeAudiences) {
         this.registeredClientRepository = registeredClientRepository;
         this.authorizationCodeService = authorizationCodeService;
         this.refreshTokenService = refreshTokenService;
@@ -56,6 +58,7 @@ public class OAuth2TokenFilter extends OncePerRequestFilter {
         this.passwordEncoder = passwordEncoder;
         this.clientAuthenticator = clientAuthenticator;
         this.objectMapper = new ObjectMapper();
+        this.allowedExchangeAudiences = Set.copyOf(allowedExchangeAudiences);
     }
 
     @Override
@@ -66,9 +69,7 @@ public class OAuth2TokenFilter extends OncePerRequestFilter {
             return;
         }
 
-        log.info("Token request received | params: {}", request.getParameterMap().entrySet().stream()
-                .map(e -> e.getKey() + "=" + String.join(",", e.getValue()))
-                .collect(Collectors.joining(" | ")));
+        log.info("Token request received | grant_type={}", request.getParameter("grant_type"));
 
         try {
             String grantType = request.getParameter("grant_type");
@@ -158,13 +159,14 @@ public class OAuth2TokenFilter extends OncePerRequestFilter {
                 ? Set.of(data.scope().split("\\s+"))
                 : Set.of();
         String issuer = getBaseUrl(request);
-        String accessToken = jwtTokenProvider.generateOAuth2Token(data.username(), grantedScopes, issuer);
-        String refreshToken = refreshTokenService.issueToken(data.username(), grantedScopes, data.scope());
+        // RFC 8707: if resource was bound at authorization time, set it as token audience
+        String accessToken = jwtTokenProvider.generateOAuth2Token(data.username(), grantedScopes, issuer, data.resourceUri());
+        String refreshToken = refreshTokenService.issueToken(data.username(), grantedScopes, data.scope(), data.resourceUri());
 
         sendTokenResponse(response, accessToken, refreshToken, data.scope());
 
-        log.info("OAuth2 token issued | client_id={} | user={} | scope={} | access_token={} | refresh_token={}",
-                data.clientId(), data.username(), data.scope(), accessToken, refreshToken);
+        log.info("OAuth2 token issued | client_id={} | user={} | scope={} | resource={}",
+                data.clientId(), data.username(), data.scope(), data.resourceUri());
     }
 
     private void handleRefreshTokenGrant(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -187,7 +189,8 @@ public class OAuth2TokenFilter extends OncePerRequestFilter {
                 ? Set.of(data.scope().split("\\s+"))
                 : Set.of();
         String issuer = getBaseUrl(request);
-        String accessToken = jwtTokenProvider.generateOAuth2Token(data.username(), grantedScopes, issuer);
+        // RFC 8707: preserve audience binding from original authorization
+        String accessToken = jwtTokenProvider.generateOAuth2Token(data.username(), grantedScopes, issuer, data.resourceUri());
 
         sendTokenResponse(response, accessToken, rotationResult.newToken(), data.scope());
 
@@ -247,10 +250,20 @@ public class OAuth2TokenFilter extends OncePerRequestFilter {
             }
         }
 
-        // Generate Token-B with mapped permissions and audience = issuer URL
+        // RFC 8693 §2.1: audience parameter — validate against allowlist
+        String audienceParam = request.getParameter("audience");
+        if (audienceParam != null && !audienceParam.isBlank()) {
+            if (!allowedExchangeAudiences.contains(audienceParam)) {
+                log.warn("Token exchange rejected | reason=audience not in allowlist | audience={}", audienceParam);
+                sendError(response, OAuth2Error.INVALID_TARGET, "The requested audience is not permitted for token exchange");
+                return;
+            }
+        }
+
+        // Generate Token-B: aud = audience param if provided, otherwise no audience
         String issuer = getBaseUrl(request);
         String tokenB = jwtTokenProvider.generateOAuth2Token(
-                parsedToken.get().username(), mappedPermissions, issuer, issuer);
+                parsedToken.get().username(), mappedPermissions, issuer, audienceParam);
 
         // RFC 8693 Section 2.2 response (no refresh_token)
         sendTokenExchangeResponse(response, tokenB);
@@ -327,7 +340,6 @@ public class OAuth2TokenFilter extends OncePerRequestFilter {
         sb.append("}");
 
         String tokenResponseBody = sb.toString();
-        log.info("OAuth2 token response body: {}", tokenResponseBody);
         response.getOutputStream().write(tokenResponseBody.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         response.getOutputStream().flush();
     }

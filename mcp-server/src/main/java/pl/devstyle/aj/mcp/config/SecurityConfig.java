@@ -33,7 +33,7 @@ public class SecurityConfig {
 
     @Bean
     public TokenExchangeClient tokenExchangeClient(RestClient oauthRestClient) {
-        return new TokenExchangeClient(oauthRestClient, clientId, clientSecret);
+        return new TokenExchangeClient(oauthRestClient, clientId, clientSecret, mcpBaseUrl);
     }
 
     @Bean
@@ -45,7 +45,8 @@ public class SecurityConfig {
                 tokenExchangeClient,
                 mcpAuthenticationEntryPoint,
                 clientId,
-                clientSecret
+                clientSecret,
+                mcpBaseUrl
         );
     }
 

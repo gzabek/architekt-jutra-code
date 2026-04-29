@@ -1,0 +1,74 @@
+orchestrator:
+  started_phase: phase-1
+  completed_phases: []
+  failed_phases: []
+  created: "2026-04-27T13:53:00Z"
+  updated: "2026-04-27T13:53:00Z"
+  task_path: .maister/tasks/development/2026-04-27-mcp-rfc7662-token-introspection-rfc8693-token-exchange
+
+  options:
+    spec_audit_enabled: null
+    skip_test_suite: false
+    e2e_enabled: false
+    user_docs_enabled: false
+    code_review_enabled: true
+    pragmatic_review_enabled: true
+    reality_check_enabled: true
+    production_check_enabled: true
+
+  task_ids: {}
+
+task:
+  title: "Replace token passthrough anti-pattern with RFC 7662 Token Introspection and RFC 8693 Token Exchange"
+  description: "Replace the token passthrough anti-pattern in the MCP server with RFC 7662 Token Introspection and RFC 8693 Token Exchange. Big bang implementation - Both mechanisms ship together."
+  status: in_progress
+  tags: [mcp, authentication, oauth2, rfc7662, rfc8693, security, token-introspection, token-exchange]
+  priority: high
+
+task_context:
+  risk_level: high
+  clarifications_resolved: null
+  scope_expanded: null
+  architecture_decision: "Embedded AS, RSA/RS256 signing, RFC 8693 Token Exchange, RFC 9728 PRM, big bang delivery"
+  task_characteristics:
+    has_reproducible_defect: false
+    modifies_existing_code: true
+    creates_new_entities: true
+    involves_data_operations: true
+    ui_heavy: false
+  research_reference:
+    path: .maister/tasks/research/2026-04-27-mcp-server-auth-no-token-passthrough
+    research_question: "How should our MCP server handle authentication without token passthrough, per MCP spec?"
+    research_type: mixed
+    confidence_level: high
+  phase_summaries:
+    research:
+      summary: "MCP spec 2025-11-25 explicitly forbids token passthrough. Gaps identified: missing RFC 9728 PRM endpoint, missing WWW-Authenticate header on 401s, missing aud binding (RFC 8707), HMAC→RSA migration needed, token exchange audience not parameterized. ADRs accepted: RS256 signing, RFC 8693 token exchange, RFC 9728 PRM, RFC 8707 audience binding."
+      key_findings:
+        - "MCP server MUST act as OAuth 2.1 Resource Server - token passthrough explicitly prohibited"
+        - "RFC 9728 PRM endpoint (/.well-known/oauth-protected-resource) is REQUIRED by latest spec"
+        - "WWW-Authenticate header with resource_metadata must be returned on 401 responses"
+        - "Tokens must have aud claim bound to MCP server URI (RFC 8707)"
+        - "HMAC signing must be replaced with RSA (RS256) for JWKS publication"
+        - "Token Exchange RFC 8693 already partially implemented - needs aud parameterization and allowlist"
+        - "New DB column resource_uri needed in authorization_codes table"
+      recommended_approach: "Embedded AS retained. Additive changes: RsaKeyConfiguration, JwksController, ProtectedResourceMetadataController, updated JwtTokenProvider (RS256), updated JwtAuthenticationFilter (NimbusJwtDecoder), SecurityConfiguration WWW-Authenticate, OAuth2AuthorizationFilter resource param, OAuth2TokenFilter aud binding, AuthorizationCodeService resource_uri column, Liquibase migration."
+    codebase_analysis:
+      key_files: []
+      primary_language: Java
+      summary: null
+    clarifications: []
+    gap_analysis:
+      integration_points: []
+      summary: null
+    specification:
+      summary: null
+    implementation:
+      summary: null
+
+verification_context:
+  last_status: null
+  issues_found: []
+  fixes_applied: []
+  decisions_made: []
+  reverify_count: 0

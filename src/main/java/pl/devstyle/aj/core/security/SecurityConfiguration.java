@@ -39,21 +39,27 @@ public class SecurityConfiguration {
     private final JwtTokenProvider jwtTokenProvider;
     private final ObjectMapper objectMapper;
     private final List<String> allowedOrigins;
+    private final List<String> allowedExchangeAudiences;
     private final RegisteredClientRepository registeredClientRepository;
     private final AuthorizationCodeService authorizationCodeService;
     private final RefreshTokenService refreshTokenService;
+    private final String resourceUri;
 
     public SecurityConfiguration(JwtTokenProvider jwtTokenProvider, ObjectMapper objectMapper,
                                  @Value("${app.cors.allowed-origins:}") List<String> allowedOrigins,
+                                 @Value("${app.oauth2.allowed-exchange-audiences:}") List<String> allowedExchangeAudiences,
                                  RegisteredClientRepository registeredClientRepository,
                                  AuthorizationCodeService authorizationCodeService,
-                                 RefreshTokenService refreshTokenService) {
+                                 RefreshTokenService refreshTokenService,
+                                 @Value("${app.oauth2.resource-uri}") String resourceUri) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.objectMapper = objectMapper;
         this.allowedOrigins = allowedOrigins;
+        this.allowedExchangeAudiences = allowedExchangeAudiences;
         this.registeredClientRepository = registeredClientRepository;
         this.authorizationCodeService = authorizationCodeService;
         this.refreshTokenService = refreshTokenService;
+        this.resourceUri = resourceUri;
     }
 
     @Bean
@@ -67,6 +73,10 @@ public class SecurityConfiguration {
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            // RFC 6750 s3 -- include resource_metadata URI so clients can discover
+                            // authorization server details (RFC 9728).
+                            response.setHeader("WWW-Authenticate",
+                                    "Bearer resource_metadata=\"" + resourceUri + "/.well-known/oauth-protected-resource\"");
                             var errorResponse = new ErrorResponse(
                                     HttpStatus.UNAUTHORIZED.value(),
                                     HttpStatus.UNAUTHORIZED.getReasonPhrase(),
@@ -92,6 +102,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth -> auth
                         // OAuth2 server endpoints
                         .requestMatchers(HttpMethod.GET, "/.well-known/oauth-authorization-server").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/.well-known/oauth-protected-resource").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/oauth2/jwks.json").permitAll()
                         .requestMatchers(HttpMethod.POST, "/oauth2/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/oauth2/token").permitAll()
                         .requestMatchers(HttpMethod.POST, "/oauth2/introspect").permitAll()
@@ -133,7 +145,7 @@ public class SecurityConfiguration {
                         // Fallback
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, resourceUri),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new PublicClientRegistrationFilter(registeredClientRepository, passwordEncoder()),
                         JwtAuthenticationFilter.class)
@@ -141,7 +153,8 @@ public class SecurityConfiguration {
                         PublicClientRegistrationFilter.class)
                 .addFilterAfter(new OAuth2TokenFilter(registeredClientRepository, authorizationCodeService,
                                 refreshTokenService, jwtTokenProvider, passwordEncoder(),
-                                new OAuth2ClientAuthenticator(registeredClientRepository, passwordEncoder())),
+                                new OAuth2ClientAuthenticator(registeredClientRepository, passwordEncoder()),
+                                allowedExchangeAudiences),
                         OAuth2AuthorizationFilter.class)
                 .addFilterAfter(new OAuth2IntrospectionFilter(
                                 new OAuth2ClientAuthenticator(registeredClientRepository, passwordEncoder()),

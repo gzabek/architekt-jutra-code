@@ -196,4 +196,14 @@ class AuthIntegrationTests {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401));
     }
+
+    @Test
+    void protectedEndpoint_noToken_returns401WithWwwAuthenticateHeader() throws Exception {
+        // RFC 6750 §3 requires WWW-Authenticate on 401 responses with resource_metadata link (RFC 9728)
+        mockMvc.perform(get("/api/products"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .header().string("WWW-Authenticate",
+                                org.hamcrest.Matchers.containsString("resource_metadata")));
+    }
 }

@@ -16,11 +16,17 @@ Coding standards, conventions, and best practices organized by domain.
 
 Located in `.maister/docs/project/`
 
+### Vision (`project/vision.md`)
+Purpose and goals of the aj platform: plugin-based microkernel architecture, AI-native MCP access via RFC 7662/8693 token exchange, LLM-powered plugins, and local dev stack. Covers target users, core goals, and current non-goals.
+
 ### Tech Stack (`project/tech-stack.md`)
-Java 25, Spring Boot 4.0.5 (WebMVC, JPA, JOOQ, Liquibase), PostgreSQL, Maven, TestContainers. Includes dependency versions, rationale for choices, and pending architectural decisions (JPA vs JOOQ, plugin framework selection).
+Java 25, Spring Boot 4.0.5 (WebMVC, JPA, JOOQ, Liquibase, Security), PostgreSQL 18, Maven, React 19 + TypeScript + Vite + Chakra UI. Includes: MCP server (`aj-mcp`, MCP SDK 0.18.1), custom OAuth2 AS with JJWT 0.12.6, LiteLLM/LangFuse/Presidio AI stack, full Docker Compose service inventory, and all key dependency versions.
 
 ### Architecture (`project/architecture.md`)
-Microkernel (plugin-based) architecture pattern — currently in pre-alpha scaffolding phase. Documents application core structure, database layer (Liquibase + PostgreSQL), test infrastructure (TestContainers), target data flow, and planned package structure.
+Microkernel (plugin-based) architecture — actively implemented. Covers: core package structure, custom JWT auth + custom OAuth2 AS (RFC 7662 introspection, RFC 8693 token exchange, RFC 8414 metadata), MCP server topology and token flow, plugin microkernel (PluginDescriptor, PluginObject, iframe + postMessage SDK), LLM integration, dual JPA/jOOQ data strategy, and request flow diagrams for web and MCP clients.
+
+### Roadmap (`project/roadmap.md`)
+Development roadmap tracking completed work and planned features. Completed: full security stack (JWT, OAuth2 AS, MCP server with RFC 7662/8693), domain CRUD, plugin architecture, LLM integration, test infrastructure. Near-term: external plugin loading, MCP tool expansion. Future: Dockerfile, CI/CD, multi-tenancy, observability.
 
 ---
 
@@ -47,6 +53,9 @@ Let code speak through structure and naming, comment sparingly for non-obvious l
 
 #### Minimal Implementation (`standards/global/minimal-implementation.md`)
 Build only what is needed, clear purpose for every method, delete exploration artifacts, no future stubs or speculative abstractions.
+
+#### MCP Server (`standards/global/mcp.md`)
+MCP server registration via opencode.json (mcpServers key, local/remote types), and tool/resource/prompt naming conventions (snake_case, verb-first).
 
 ### Backend Standards
 

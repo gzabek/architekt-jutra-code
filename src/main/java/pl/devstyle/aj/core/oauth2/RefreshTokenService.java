@@ -20,9 +20,9 @@ public class RefreshTokenService {
 
     private final ConcurrentHashMap<String, RefreshTokenData> refreshTokens = new ConcurrentHashMap<>();
 
-    public String issueToken(String username, Set<String> permissions, String scope) {
+    public String issueToken(String username, Set<String> permissions, String scope, String resourceUri) {
         var token = generateToken();
-        var data = new RefreshTokenData(username, permissions, scope, Instant.now());
+        var data = new RefreshTokenData(username, permissions, scope, resourceUri, Instant.now());
         refreshTokens.put(token, data);
         log.debug("Issued refresh token for user: {}", username);
         return token;
@@ -42,7 +42,7 @@ public class RefreshTokenService {
 
         // Issue new refresh token (rotation)
         var newToken = generateToken();
-        var newData = new RefreshTokenData(data.username(), data.permissions(), data.scope(), Instant.now());
+        var newData = new RefreshTokenData(data.username(), data.permissions(), data.scope(), data.resourceUri(), Instant.now());
         refreshTokens.put(newToken, newData);
 
         log.debug("Rotated refresh token for user: {}", data.username());
@@ -76,6 +76,7 @@ public class RefreshTokenService {
             String username,
             Set<String> permissions,
             String scope,
+            String resourceUri,
             Instant createdAt
     ) {}
 

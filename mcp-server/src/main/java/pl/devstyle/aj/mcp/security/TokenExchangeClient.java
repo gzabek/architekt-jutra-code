@@ -1,6 +1,5 @@
 package pl.devstyle.aj.mcp.security;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -11,6 +10,8 @@ import org.springframework.web.client.RestClientException;
 /**
  * Exchanges Token-A (user's access token) for Token-B (backend-scoped token)
  * via RFC 8693 Token Exchange against the backend /oauth2/token endpoint.
+ * The {@code audience} parameter is always sent so Token-B carries an {@code aud}
+ * claim scoped to this MCP server's URI, which the filter then validates.
  * No caching -- exchange per request.
  */
 @Slf4j
@@ -22,17 +23,21 @@ public class TokenExchangeClient {
     private final RestClient oauthRestClient;
     private final String clientId;
     private final String clientSecret;
+    private final String mcpServerUri;
     private final ObjectMapper objectMapper;
 
-    public TokenExchangeClient(RestClient oauthRestClient, String clientId, String clientSecret) {
+    public TokenExchangeClient(RestClient oauthRestClient, String clientId, String clientSecret,
+                               String mcpServerUri) {
         this.oauthRestClient = oauthRestClient;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.mcpServerUri = mcpServerUri;
         this.objectMapper = new ObjectMapper();
     }
 
     /**
      * Exchange Token-A for Token-B via the backend token endpoint.
+     * Sends {@code audience=mcpServerUri} so Token-B is audience-restricted to this server.
      *
      * @param subjectToken the user's access token (Token-A)
      * @return the exchanged access token (Token-B)

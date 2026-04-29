@@ -19,10 +19,10 @@ public class AuthorizationCodeService {
 
     public void storeAuthorizationCode(String code, String clientId, String redirectUri, String scope,
                                        String codeChallenge, String codeChallengeMethod,
-                                       String username, Set<String> permissions) {
+                                       String username, Set<String> permissions, String resourceUri) {
         var data = new AuthorizationCodeData(
                 clientId, redirectUri, scope, codeChallenge, codeChallengeMethod,
-                username, permissions, Instant.now()
+                username, permissions, resourceUri, Instant.now()
         );
         authorizationCodes.put(code, data);
         log.debug("Stored authorization code for client: {} with TTL: {}s", clientId, CODE_EXPIRATION_SECONDS);
@@ -69,6 +69,7 @@ public class AuthorizationCodeService {
             String codeChallengeMethod,
             String username,
             Set<String> permissions,
+            String resourceUri,
             Instant createdAt
     ) {}
 }

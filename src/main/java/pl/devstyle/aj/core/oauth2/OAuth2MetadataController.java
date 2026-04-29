@@ -45,6 +45,7 @@ public class OAuth2MetadataController {
                 entry("token_endpoint", baseUrl + "/oauth2/token"),
                 entry("registration_endpoint", baseUrl + "/oauth2/register"),
                 entry("introspection_endpoint", baseUrl + "/oauth2/introspect"),
+                entry("jwks_uri", baseUrl + "/oauth2/jwks.json"),
                 entry("grant_types_supported", new String[]{"authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:token-exchange"}),
                 entry("response_types_supported", new String[]{"code"}),
                 entry("code_challenge_methods_supported", new String[]{"S256"}),

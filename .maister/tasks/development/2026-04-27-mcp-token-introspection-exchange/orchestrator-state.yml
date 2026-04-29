@@ -1,0 +1,57 @@
+orchestrator:
+  started_phase: phase-1
+  completed_phases: []
+  failed_phases: []
+  created: "2026-04-27T12:00:00Z"
+  updated: "2026-04-27T12:00:00Z"
+  task_path: .maister/tasks/development/2026-04-27-mcp-token-introspection-exchange
+  options:
+    spec_audit_enabled: true
+    skip_test_suite: false
+    e2e_enabled: false
+    user_docs_enabled: false
+    code_review_enabled: true
+    pragmatic_review_enabled: true
+    reality_check_enabled: true
+    production_check_enabled: true
+
+task:
+  title: "MCP Token Introspection (RFC 7662) & Token Exchange (RFC 8693)"
+  description: "Replace token passthrough anti-pattern in the MCP server with RFC 7662 Token Introspection and RFC 8693 Token Exchange. Big bang implementation — both mechanisms ship together."
+  status: in_progress
+  tags: [mcp, authentication, oauth, token-introspection, token-exchange, rfc7662, rfc8693, security]
+  priority: high
+
+task_context:
+  risk_level: high
+  clarifications_resolved: true
+  scope_expanded: false
+  architecture_decision: "Embedded AS with RSA/RS256, dedicated ProtectedResourceMetadataController, RFC 8707 audience binding, RFC 8693 token exchange with allowed-audience allowlist"
+  task_characteristics:
+    has_reproducible_defect: false
+    modifies_existing_code: true
+    creates_new_entities: true
+    involves_data_operations: true
+    ui_heavy: false
+  research_reference:
+    path: .maister/tasks/research/2026-04-27-mcp-server-auth-no-token-passthrough
+    research_question: "How should our MCP server handle authentication without token passthrough, per MCP spec?"
+    research_type: mixed
+    confidence_level: high
+  phase_summaries:
+    research:
+      summary: "Full research completed with high confidence. MCP spec 2025-11-25 explicitly forbids token passthrough. Server must act as OAuth 2.1 RS+AS with RSA signing, RFC 9728 PRM endpoint, RFC 8707 audience binding, RFC 8693 token exchange."
+      key_findings:
+        - "Token passthrough explicitly prohibited by MCP spec 2025-11-25"
+        - "Must add RFC 9728 /.well-known/oauth-protected-resource endpoint"
+        - "Must add WWW-Authenticate header with resource_metadata on 401s"
+        - "Must migrate from HS256 (HMAC) to RS256 (RSA) signing + /oauth2/jwks.json"
+        - "Must bind aud claim via RFC 8707 resource parameter"
+        - "Must fix token exchange to use requested_audience not issuer URI"
+        - "Must add audience allowlist to token exchange"
+        - "Liquibase migration needed: add resource_uri to authorization_codes table"
+      recommended_approach: "Big bang: all 4 ADRs implemented together — RSA key infra, JWKS endpoint, PRM endpoint, RFC 8707 aud binding, RFC 8693 token exchange hardening"
+    codebase_analysis:
+      key_files: []
+      primary_language: Java
+      summary: null
